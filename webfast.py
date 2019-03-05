@@ -29,12 +29,6 @@ import numpy as np
 
 import immp
 
-class Photometer:
-    def __init__(self):
-        self.photometer_status = {}
-        self.hw_status = {}
-        self.image = None
-
 class Fast:
     def __init__(self):
         self.fast_status = {}
@@ -44,14 +38,6 @@ class Fast:
         self.flux = []
         self.mean = []
         self.status_counter = 0
-
-class OldGuider:
-    def __init__(self):
-        self.fast_status = {}
-        self.acs_status = {}
-        self.acquisition = True
-        self.exposure = 0.4
-        self.image = None
 
 # Socket part
 
@@ -105,22 +91,6 @@ class Favor2Protocol(Protocol):
 
     def requestStatus(self):
         pass
-
-class PhotometerProtocol(Favor2Protocol):
-    def connectionMade(self):
-        Favor2Protocol.connectionMade(self)
-
-    def connectionLost(self, reason):
-        Favor2Protocol.connectionLost(self, reason)
-
-    def requestStatus(self):
-        self.message("get_status")
-
-    def processMessage(self, string):
-        command = immp.parse(string)
-
-        if command.name() == 'photometer_status':
-            self.factory.object.photometer_status = command.kwargs
 
 class FastProtocol(Favor2Protocol):
     def connectionMade(self):
@@ -195,102 +165,6 @@ class FastProtocol(Favor2Protocol):
             self.factory.object.image_format = self.image_format
         elif self.image_type == 'total':
             self.factory.object.total_image = data
-
-class OldGuiderProtocol(Favor2Protocol):
-    def connectionMade(self):
-        self.wait_image = False
-        self.wait_image_time = datetime.datetime.now()
-
-        self.factory.object.acquisition = False
-        self.factory.object.exposure = 0.4
-
-        self.factory.object.image = None
-        Favor2Protocol.connectionMade(self)
-
-    def connectionLost(self, reason):
-        self.factory.object.image = None
-        Favor2Protocol.connectionLost(self, reason)
-
-    def requestStatus(self):
-        if not self.factory.object.acquisition:
-            return
-
-        if not self.wait_image or (datetime.datetime.now() - self.wait_image_time).total_seconds() > 30:
-            self.message("get_image %d" % (int(self.factory.object.exposure/0.04)))
-            self.wait_image = True
-            self.wait_image_time = datetime.datetime.now()
-
-    def processMessage(self, string):
-        command = string.split()
-
-        if command[0] == 'image':
-            self.is_binary = True
-            self.width = int(command[1])
-            self.height = int(command[2])
-            self.binary_length = self.width*self.height
-
-    def processBinary(self, data):
-        arr = np.fromstring(data, dtype=np.uint8).reshape(self.height, self.width)
-
-        vmin,vmax = np.percentile(arr, [0.5,95.5])
-        if vmax < 10:
-            vmax = 10
-
-        #arr[arr == np.max(arr)] = 0
-
-        arr = 1.0*(arr - vmin)/(vmax-vmin)
-        arr[arr<0] = 0
-        arr[arr>1] = 1
-
-        cm_hot = cm.get_cmap('hot')
-        arr = cm_hot(arr)*255
-
-        image = Image.fromarray(np.uint8(arr))
-
-        draw = ImageDraw.Draw(image)
-        #draw.line([0,0,100,100], fill='blue', width=3)
-        x0,y0 = 377,228
-        draw.ellipse([x0-10,y0-10,x0+10,y0+10], outline='green')
-
-        if self.factory.object.acs_status.has_key('P2'):
-            x0, y0 = image.size[0] - 100, 100
-            r0 = 70
-            positionAngle = 50.7
-            alpha = np.deg2rad(-float(self.factory.object.acs_status.get('P2', 0)) - positionAngle)
-
-            # A
-            draw.line([x0, y0, x0 + r0*np.sin(alpha), y0 + r0*np.cos(alpha)], fill='green', width=2)
-            draw.line([x0 + r0*np.sin(alpha), y0 + r0*np.cos(alpha), x0 + 0.8*r0*np.sin(alpha+0.05), y0 + 0.8*r0*np.cos(alpha+0.05)], fill='green', width=2)
-            draw.line([x0 + r0*np.sin(alpha), y0 + r0*np.cos(alpha), x0 + 0.8*r0*np.sin(alpha-0.05), y0 + 0.8*r0*np.cos(alpha-0.05)], fill='green', width=2)
-
-            draw.text([x0 + 1.2*r0*np.sin(alpha), y0 + 1.2*r0*np.cos(alpha)], "A", fill='green')
-            draw.text([x0 + 1.2*r0*np.cos(alpha), y0 - 1.2*r0*np.sin(alpha)], "Z", fill='green')
-
-            # Z
-            draw.line([x0, y0, x0+r0*np.cos(alpha), y0-r0*np.sin(alpha)], fill='green', width=2)
-
-        str = StringIO()
-        image.save(str, 'jpeg', quality=95)
-
-        self.factory.object.image = str.getvalue()
-
-        self.wait_image = False
-
-class AcsProtocol(Favor2Protocol):
-    def connectionMade(self):
-        Favor2Protocol.connectionMade(self)
-
-    def connectionLost(self, reason):
-        Favor2Protocol.connectionLost(self, reason)
-
-    def requestStatus(self):
-        self.message("Get Alpha Delta AzCur ZdCur P2 PA Mtime Stime")
-
-    def processMessage(self, string):
-        command = immp.parse(string)
-
-        if command.name() == 'none':
-            self.factory.object.acs_status = command.kwargs
 
 class Favor2ClientFactory(ReconnectingClientFactory):
 #    factor = 1 # Disable exponential growth of reconnection delay
@@ -431,64 +305,14 @@ class WebFast(Resource):
         else:
             return q.path
 
-class WebOldGuider(Resource):
-    isLeaf = True
-
-    def __init__(self, fast, base='/fast'):
-        self.fast = fast
-        self.base = base
-
-    def render_GET(self, request):
-        q = urlparse.urlparse(request.uri)
-        args = urlparse.parse_qs(q.query)
-
-        if q.path == self.base + '/status':
-            status = {'acquisition':self.fast.acquisition, 'storage':0, 'vs56':1, 'exposure':self.fast.exposure}
-            status.update(self.fast.acs_status)
-            return serve_json(request,
-                              fast_connected = self.fast.factory.isConnected(),
-                              fast = status)
-        elif q.path == self.base + '/command':
-            command = immp.parse(args['string'][0])
-            if command.name() == 'start':
-                self.fast.acquisition = True
-            elif command.name() == 'stop':
-                self.fast.acquisition = False
-            elif command.name() == 'set_grabber':
-                if command.kwargs.has_key('exposure'):
-                    self.fast.exposure = float(command.kwargs.get('exposure', 0.4))
-
-            return serve_json(request)
-        elif q.path == self.base + '/image.jpg':
-            if self.fast.image:
-                request.responseHeaders.setRawHeaders("Content-Type", ['image/jpeg'])
-                request.responseHeaders.setRawHeaders("Content-Length", [len(self.fast.image)])
-                return self.fast.image
-            else:
-                request.setResponseCode(400)
-                return "No images"
-        else:
-            return q.path
-
 # Main
 if __name__ == '__main__':
-    photometer = Photometer()
     fast = Fast()
-    guider = Fast()
-    oldguider = OldGuider()
 
-    photometer.factory = Favor2ClientFactory(PhotometerProtocol, photometer)
     fast.factory = Favor2ClientFactory(FastProtocol, fast)
-    guider.factory = Favor2ClientFactory(FastProtocol, guider)
-    oldguider.factory = Favor2ClientFactory(OldGuiderProtocol, oldguider)
-    oldguider.acsfactory = Favor2ClientFactory(AcsProtocol, oldguider)
 
     from twisted.internet import reactor
-    reactor.connectTCP('localhost', 5556, photometer.factory)
-    reactor.connectTCP('rak.sao.ru', 5555, fast.factory)
-    reactor.connectTCP('mmt2.sao.ru', 5555, guider.factory)
-    reactor.connectTCP('abc.sao.ru', 5433, oldguider.factory)
-    reactor.connectTCP('tb.sao.ru', 7654, oldguider.acsfactory)
+    reactor.connectTCP('localhost', 5555, fast.factory)
 
     passwd = {'fast':'fast'}
 
@@ -496,16 +320,9 @@ if __name__ == '__main__':
     root = File("web")
     # ...with some other paths handled also
     root.putChild("", File('web/webphotometer.html'))
-    root.putChild("photometer.html", File('web/webphotometer.html'))
     root.putChild("fast.html", File('web/webphotometer.html'))
-    root.putChild("guider.html", File('web/webphotometer.html'))
-    root.putChild("oldguider.html", File('web/webphotometer.html'))
-    root.putChild("mppp.html", File('web/webphotometer.html'))
 
-    root.putChild("photometer", WebPhotometer(photometer))
     root.putChild("fast", WebFast(fast, base='/fast'))
-    root.putChild("guider", WebFast(guider, base='/guider'))
-    root.putChild("oldguider", WebOldGuider(oldguider, base='/oldguider'))
 
     #site = Site(Auth(root, passwd))
     site = Site(root)

@@ -15,6 +15,11 @@ typedef struct {
     char type; /* FITSIO type */
 } image_keyword_str;
 
+enum image_type {
+    IMAGE_UINT16,
+    IMAGE_DOUBLE
+};
+
 typedef struct {
     /* Geometric size */
     int width;
@@ -31,10 +36,7 @@ typedef struct {
     image_keyword_str *keywords;
 
     /* Type: 0 = u_int16_t, 1 = double */
-    enum image_type {
-        IMAGE_UINT16,
-        IMAGE_DOUBLE
-    } type;
+    enum image_type type;
 
     /* Data */
     union {

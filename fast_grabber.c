@@ -98,6 +98,173 @@ void process_grabber_command(grabber_str *grabber, char *string)
             set_vslib_scalar(grabber, VSLIB3_CINTERFACE_OPTION_AMPLIFY, amplification, VSLIB3_SCALAR_UNIT_RAW);
         if(binning >= 0 && binning < 4)
             set_vslib_enum(grabber, VSLIB3_CINTERFACE_OPTION_BINNING, VSLIB3_ENUM_ID_1x1 + binning);
+#elif CSDU
+        double exposure = -1;
+        int amplification = -1;
+        int binning = -1;
+        int should_restart = FALSE;
+
+        command_args(command,
+                     "exposure=%lf", &exposure,
+                     "amplification=%d", &amplification,
+                     "binning=%d", &binning,
+                     NULL);
+
+        if(grabber_is_acquiring(grabber) || TRUE){
+            grabber_acquisition_stop(grabber);
+            should_restart = FALSE;
+        }
+
+        if(exposure >= 0)
+            grabber_set_exposure(grabber, exposure);
+        if(amplification >= 0)
+            grabber_set_amplification(grabber, amplification);
+        if(binning >= 0 && binning < 4)
+            grabber_set_binning(grabber, binning);
+        if(cooling >= 0)
+            grabber_set_cooling(grabber, cooling);
+        if(shutter >= 0)
+            grabber_set_shutter(grabber, shutter);
+
+        if(should_restart){
+            grabber_acquisition_start(grabber);
+        }
+#elif FAKE
+        double exposure = -1;
+        int amplification = -1;
+        int binning = -1;
+
+        command_args(command,
+                     "exposure=%lf", &exposure,
+                     "amplification=%d", &amplification,
+                     "binning=%d", &binning,
+                     NULL);
+
+        if(exposure >= 0)
+            grabber_set_exposure(grabber, exposure);
+        if(amplification >= 0)
+            grabber_set_amplification(grabber, amplification);
+        if(binning >= 0 && binning < 4)
+            grabber_set_binning(grabber, binning);
+#elif ANDOR
+        double exposure = 0.03;
+        int binning = -1;
+        int shutter = -1;
+        int preamp = -1;
+        int filter = -1;
+        int overlap = -1;
+        int cooling = -1;
+        int rate = -1;
+        double temperature = -100.0;
+        double fps = -1;
+        int should_restart = FALSE;
+
+        command_args(command,
+                     "exposure=%lf", &exposure,
+                     "binning=%d", &binning,
+                     "shutter=%d", &shutter,
+                     "preamp=%d", &preamp,
+                     "filter=%d", &filter,
+                     "overlap=%d", &overlap,
+                     "cooling=%d", &cooling,
+                     "rate=%d", &rate,
+                     "temperature=%lf", &temperature,
+                     "fps=%lf", &fps,
+                   NULL);
+
+        if(grabber_is_acquiring(grabber)){
+            grabber_acquisition_stop(grabber);
+            should_restart = TRUE;
+        }
+
+        if(rate >= 0)
+            AT_SetEnumIndex(grabber->handle, L"PixelReadoutRate", rate);
+        if(exposure > 0)
+            AT_SetFloat(grabber->handle, L"ExposureTime", exposure);
+        if(binning >= 0)
+            AT_SetEnumIndex(grabber->handle, L"AOIBinning", binning);
+        if(shutter >= 0)
+            AT_SetEnumIndex(grabber->handle, L"ElectronicShutteringMode", shutter);
+        if(preamp >= 0){
+            AT_SetEnumIndex(grabber->handle, L"SimplePreAmpGainControl", preamp);
+            if(preamp < 2)
+                AT_SetEnumString(grabber->handle, L"PixelEncoding", L"Mono12");
+        }
+        if(filter >= 0)
+            AT_SetBool(grabber->handle, L"SpuriousNoiseFilter", filter);
+        if(overlap >= 0)
+            AT_SetBool(grabber->handle, L"Overlap", overlap);
+        if(cooling >= 0)
+            AT_SetBool(grabber->handle, L"SensorCooling", cooling);
+        if(temperature > -50.0)
+            AT_SetFloat(grabber->handle, L"TargetSensorTemperature", temperature);
+        if(fps > 0.0)
+            AT_SetFloat(grabber->handle, L"FrameRate", fps);
+
+        if(should_restart){
+            grabber_acquisition_start(grabber);
+        }
+#elif ANDOR2
+        double exposure = -1;
+        int amplification = -1;
+        int binning = -1;
+        int should_restart = FALSE;
+        int cooling = -1;
+        int shutter = -1;
+        int vsspeed = -1;
+        int hsspeed = -1;
+        int x1 = -1;
+        int y1 = -1;
+        int x2 = -1;
+        int y2 = -1;
+
+        command_args(command,
+                     "exposure=%lf", &exposure,
+                     "amplification=%d", &amplification,
+                     "binning=%d", &binning,
+                     "cooling=%d", &cooling,
+                     "shutter=%d", &shutter,
+                     "vsspeed=%d", &vsspeed,
+                     "hsspeed=%d", &hsspeed,
+                     "x1=%d", &x1,
+                     "y1=%d", &y1,
+                     "x2=%d", &x2,
+                     "y2=%d", &y2,
+                     NULL);
+
+        if(grabber_is_acquiring(grabber)){
+            grabber_acquisition_stop(grabber);
+            should_restart = TRUE;
+        }
+
+        if(exposure >= 0)
+            grabber_set_exposure(grabber, exposure);
+        if(amplification >= 0)
+            grabber_set_amplification(grabber, amplification);
+        if(binning > 0 && binning < 5)
+            grabber_set_binning(grabber, binning);
+        if(cooling >= 0)
+            grabber_set_cooling(grabber, cooling);
+        if(shutter >= 0)
+            grabber_set_shutter(grabber, shutter);
+        if(vsspeed >= 0)
+            grabber_set_vsspeed(grabber, vsspeed);
+        if(hsspeed >= 0)
+            grabber_set_hsspeed(grabber, hsspeed);
+
+        if(x1 > 0)
+            grabber->x1 = x1;
+        if(y1 > 0)
+            grabber->y1 = y1;
+
+        if(x2 > 0)
+            grabber->x2 = MIN(x2, grabber->width);
+        if(y2 > 0)
+            grabber->y2 = MIN(y2, grabber->height);
+
+        if(should_restart){
+            grabber_acquisition_start(grabber);
+        }
 #endif
 
         grabber_info(grabber);
@@ -109,13 +276,16 @@ void *grabber_worker(void *data)
     fast_str *fast = (fast_str *)data;
     int is_quit = FALSE;
     int is_first = FALSE;//TRUE;
+    time_str last_update_time = time_zero();
 
-    fast->is_acquisition = FALSE;
-    grabber_acquisition_stop(fast->grabber);
-
-#ifdef VSLIB
+#if VSLIB || CSDU
     fast->is_acquisition = TRUE;
     fast->time_start = time_current();
+#elif ANDOR2
+    //grabber_acquisition_start(fast->grabber);
+#else
+    fast->is_acquisition = FALSE;
+    grabber_acquisition_stop(fast->grabber);
 #endif
 
     dprintf("Grabber subsystem started\n");
@@ -141,6 +311,15 @@ void *grabber_worker(void *data)
             /* Get rid of the first image as it is corrupted in global shutter */
             is_first = FALSE;
             image_delete(image);
+        } else {
+#if ANDOR2
+            /* Just update status and parameters */
+            if(1e-3*time_interval(last_update_time, time_current()) > 1 && !grabber_is_acquiring(fast->grabber)){
+                grabber_update(fast->grabber);
+
+                last_update_time = time_current();
+            }
+#endif
         }
 
         switch(m.event){
@@ -172,8 +351,9 @@ void *grabber_worker(void *data)
 
 #if PVCAM
         fast->is_acquisition = fast->grabber->is_acquiring;
+#elif CSDU || ANDOR2
+        fast->is_acquisition = grabber_is_acquiring(fast->grabber);
 #endif
-
     }
 
     grabber_acquisition_stop(fast->grabber);

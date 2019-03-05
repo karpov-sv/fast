@@ -10,6 +10,7 @@
 
 typedef struct {
     server_str *server;
+    server_str *web;
 
     queue_str *server_queue;
     queue_str *grabber_queue;
@@ -31,6 +32,8 @@ typedef struct {
 
     image_str *dark;
 
+    int stored_length;
+
     time_str time_start;
     time_str time_last_acquired;
     time_str time_last_stored;
@@ -47,16 +50,6 @@ typedef struct {
 
     /* Grabber */
     grabber_str *grabber;
-
-    /* ACS */
-    connection_str *acs_connection;
-    double ra;
-    double dec;
-    double az;
-    double zd;
-    double P2;
-    double PA;
-    double stime;
 
     int countdown;
 

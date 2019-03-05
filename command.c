@@ -25,12 +25,13 @@ char *strndup(char *str, int chars)
 }
 #endif
 
-static void command_push_arg(command_str *command, char *name, char *value)
+static void command_push_arg(command_str *command, char *name, char *value, char *text)
 {
     command->tokens = realloc(command->tokens, sizeof(command_token_str)*(command->length + 1));
 
     command->tokens[command->length].name = name ? make_string("%s", name) : NULL;
     command->tokens[command->length].value = value ? make_string("%s", value) : NULL;
+    command->tokens[command->length].text = text ? make_string("%s", text) : NULL;
     command->tokens[command->length].is_used = FALSE;
 
     command->length ++;
@@ -96,15 +97,17 @@ command_str *command_parse(const char *string)
                     {
                         /* Token found */
                         char *token = strndup(start, pos - start);
+                        char *text = strndup(start, pos - start);
                         char *eqpos = strchr(token, '=');
 
                         if(eqpos){
                             *eqpos = '\0';
-                            command_push_arg(command, token, eqpos + 1);
+                            command_push_arg(command, token, eqpos + 1, text);
                         } else
-                            command_push_arg(command, NULL, token);
+                            command_push_arg(command, NULL, token, text);
 
                         free(token);
+                        free(text);
                     }
 
                     state = 1;
@@ -138,6 +141,8 @@ void command_delete(command_str *command)
             free(command->tokens[d].name);
         if(command->tokens[d].value)
             free(command->tokens[d].value);
+        if(command->tokens[d].text)
+            free(command->tokens[d].text);
     }
 
     if(command->tokens)
@@ -249,6 +254,28 @@ char *command_params_as_lua(command_str *command)
     return hstring;
 }
 
+char *command_params_as_json(command_str *command)
+{
+    char *string = NULL;
+    char *jstring = NULL;
+
+    int d;
+
+    for(d = command->first; d < command->length; d++){
+        if(string)
+            add_to_string(&string, ", ");
+
+        if(command->tokens[d].name)
+            add_to_string(&string, "\"%s\":\"%s\"", command->tokens[d].name, command->tokens[d].value);
+    }
+
+    jstring = make_string("{%s}", string);
+
+    free(string);
+
+    return jstring;
+}
+
 int command_match(command_str *command, const char *cmdname)
 {
     int result = FALSE;
@@ -302,11 +329,11 @@ make_pass:
 
         for(d = command->first; d < command->length; d++){
             if(!command->tokens[d].is_used && !arg_used[nargs] &&
-               ((pass == 1 && !command->tokens[d].name) ||
-                (command->tokens[d].name && strcmp(command->tokens[d].name, name) == 0))){
+               ((pass == 1 /* && !command->tokens[d].name */) ||
+                (name && command->tokens[d].name && strcmp(command->tokens[d].name, name) == 0))){
                 if(strcmp(format, "%s") == 0){
                     /* Special handling of strings */
-                    char *string = command->tokens[d].value;
+                    char *string = !pass ? command->tokens[d].value : command->tokens[d].text;
                     int length = strlen(string);
                     char *tmp = NULL;
 
@@ -337,7 +364,7 @@ make_pass:
 
     va_end(l);
 
-    /* On first pass, we collected all named arguments. On secons, we'll match
+    /* On first pass, we collected all named arguments. On second, we'll match
        all the unnamed ones that left using their positions */
     if(pass == 0){
         pass ++;

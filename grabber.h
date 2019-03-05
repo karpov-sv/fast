@@ -1,14 +1,13 @@
 #ifndef GRABBER_H
 #define GRABBER_H
 
-#include <glib.h>
-
 #include "time_str.h"
 #include "image.h"
 
 /* Andor specific part */
 #ifdef ANDOR
 
+#include <glib.h>
 #include <atcore.h>
 
 typedef struct {
@@ -27,6 +26,53 @@ int get_enum_index(AT_H , const wchar_t *);
 AT_WC *get_enum_string(AT_H , const wchar_t *);
 
 #endif /* ANDOR */
+
+#ifdef ANDOR2
+
+#include <atmcdLXd.h>
+
+typedef struct {
+    /* Reference point for timestamps */
+    time_str time0;
+
+    int width;
+    int height;
+
+    int x1;
+    int y1;
+    int x2;
+    int y2;
+
+    double exposure;
+    double fps;
+    int amplification;
+    int binning;
+
+    double temperature;
+    int temperaturestatus;
+
+    int cooling;
+    int shutter;
+
+    int vsspeed;
+    int hsspeed;
+    double speed;
+    double gain;
+} grabber_str;
+
+void grabber_set_exposure(grabber_str *, double );
+void grabber_set_amplification(grabber_str *, int );
+void grabber_set_binning(grabber_str *, int );
+int grabber_is_acquiring(grabber_str *);
+
+void grabber_set_cooling(grabber_str *, int );
+void grabber_set_shutter(grabber_str *, int );
+void grabber_set_vsspeed(grabber_str *, int );
+void grabber_set_hsspeed(grabber_str *, int );
+
+void grabber_update(grabber_str *);
+
+#endif /* ANDOR2 */
 
 /* PVCAM specific part */
 #ifdef PVCAM
@@ -105,6 +151,40 @@ void set_vslib_enum(grabber_str *, UINT , UINT );
 UINT get_vslib_enum(grabber_str *, UINT );
 
 #endif /* VSLIB */
+
+/* CSDU specific part */
+
+#ifdef CSDU
+
+typedef struct {
+    void *cam;
+
+    unsigned char *buffer;
+    int bufsize;
+
+    double exposure;
+    double fps;
+    int amplification;
+    int binning;
+} grabber_str;
+
+void grabber_set_exposure(grabber_str *, double );
+void grabber_set_amplification(grabber_str *, int );
+void grabber_set_binning(grabber_str *, int );
+int grabber_is_acquiring(grabber_str *);
+
+#endif /* CSDU */
+
+#ifdef FAKE
+
+typedef struct {
+    double exposure;
+    double fps;
+    int amplification;
+    int binning;
+} grabber_str;
+
+#endif /* FAKE */
 
 /* Common part */
 

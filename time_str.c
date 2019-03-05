@@ -36,11 +36,14 @@ time_str time_current()
 {
     struct tm tm;
     struct timeval tv;
+    time_t tt;
     time_str time;
 
     gettimeofday(&tv, NULL);
 
-    gmtime_r(&tv.tv_sec, &tm);
+    tt = tv.tv_sec;
+
+    gmtime_r(&tt, &tm);
 
     time.year = tm.tm_year + 1900;
     time.month = tm.tm_mon + 1;
@@ -79,7 +82,7 @@ time_str time_make(int year, int month, int day, int hour, int minute, int secon
 /* Format DD.MM.YYYY */
 char *time_str_get_date(time_str time)
 {
-    return make_string("%02d.%02d.%04d", time.day, time.month, time.year);
+    return make_string("%04d.%02d.%02d", time.year, time.month, time.day);
 }
 
 /* format HH:MM:SS.mmm */
@@ -92,8 +95,8 @@ char *time_str_get_time(time_str time)
 /* Format DD.MM.YYYY HH:MM:SS.mmm */
 char *time_str_get_date_time(time_str time)
 {
-    return make_string("%02d.%02d.%04d %02d:%02d:%02d.%03d",
-                       time.day, time.month, time.year,
+    return make_string("%04d.%02d.%02d %02d:%02d:%02d.%03d",
+                       time.year, time.month, time.day,
                        time.hour, time.minute, time.second, time.microsecond/1000);
 }
 
@@ -341,7 +344,10 @@ void time_str_set_date(time_str *time, char *string)
         pos ++;
     }
 
-    sscanf(tmp, "%d %d %d", &day, &month, &year);
+    if(tmp[2] == ' ')
+        sscanf(tmp, "%d %d %d", &day, &month, &year);
+    else
+        sscanf(tmp, "%d %d %d", &year, &month, &day);
 
     if(day > 31){
         int tmp = day;
@@ -398,8 +404,12 @@ time_str time_str_from_date_time(char *string)
 
         /* FIXME: here we incorrectly parse milliseconds if not all three digits are provided
            - e.g. 10.12 instead of 10.120 */
-        sscanf(tmp, "%d %d %d %d %d %d %d",
-               &day, &month, &year, &hour, &min, &sec, &msec);
+        if(tmp[2] == ' ')
+            sscanf(tmp, "%d %d %d %d %d %d %d",
+                   &day, &month, &year, &hour, &min, &sec, &msec);
+        else
+            sscanf(tmp, "%d %d %d %d %d %d %d",
+                   &year, &month, &day, &hour, &min, &sec, &msec);
 
         if(day > 31){
             int tmp = day;

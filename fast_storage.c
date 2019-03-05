@@ -6,6 +6,8 @@
 
 #include "fast.h"
 
+#define FITS_COMPRESS 1
+
 typedef struct {
     fast_str *fast;
     int nframes;
@@ -46,7 +48,11 @@ void prepare_storage(storage_str *storage, char *object)
 
 void store_image(storage_str *storage, image_str *image)
 {
+#ifdef FITS_COMPRESS
     char *filename = make_string("%s/%04d%02d%02d_%02d%02d%02d.%06d.fits[compress]", storage->current,
+#else
+    char *filename = make_string("%s/%04d%02d%02d_%02d%02d%02d.%06d.fits", storage->current,
+#endif
                                  image->time.year, image->time.month, image->time.day,
                                  image->time.hour, image->time.minute, image->time.second,
                                  image->time.microsecond);
@@ -101,10 +107,12 @@ void *storage_worker(void *data)
         case FAST_MSG_START:
             prepare_storage(&storage, fast->object);
             fast->is_storage = TRUE;
+            fast->stored_length = 0;
             break;
 
         case FAST_MSG_STOP:
             fast->is_storage = FALSE;
+            fast->stored_length = 0;
             break;
 
         case FAST_MSG_IMAGE:
@@ -114,6 +122,7 @@ void *storage_worker(void *data)
                     storage.nframes = 0;
                 }
                 store_image(&storage, (image_str *)m.data);
+                fast->stored_length ++;
             } else
                 image_delete((image_str *)m.data);
             break;

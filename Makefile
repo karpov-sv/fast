@@ -5,13 +5,18 @@ CC       = gcc $(PROFILE)
 DEBUG    = -DDEBUG
 GDEBUG   = -g
 OPTIMIZE = -O2 # -msse4 # -march=native -mtune=native #-msse4 -ffast-math
-#ANDOR    = -DANDOR
+ANDOR    = -DANDOR
+#ANDOR2    = -DANDOR2
 #PVCAM    = -DPVCAM
 #VSLIB	 = -DVSLIB
+#PVCAM    = -DPVCAM
+#VSLIB	 = -DVSLIB
+#CSDU     = -DCSDU
+# FAKE	 = -DFAKE
 INCLUDES = -I.
 THREADED = -D_REENTRANT -D_GNU_SOURCE -D_XOPEN_SOURCE -D_POSIX_C_SOURCE=200809L
 FLAGS    = -Wall -fms-extensions -fno-strict-aliasing
-CFLAGS   = $(FLAGS) $(THREADED) $(GDEBUG) $(DEBUG) $(OPTIMIZE) $(INCLUDES) $(ANDOR) $(PVCAM) $(VSLIB)
+CFLAGS   = $(FLAGS) $(THREADED) $(GDEBUG) $(DEBUG) $(OPTIMIZE) $(INCLUDES) $(ANDOR) $(ANDOR2) $(PVCAM) $(VSLIB) $(CSDU) $(FAKE)
 LDLIBS  = -L. -lm -lcfitsio -lpthread -ljpeg
 
 # GLib part
@@ -28,7 +33,6 @@ LDFLAGS += -static
 endif
 
 TARGETS = \
-	photometer \
 	coadd \
 
 COMMON_OBJS = \
@@ -60,9 +64,13 @@ ifeq ($(shell uname), Linux)
 LDLIBS  += -latcore
 TARGETS += test_simple fast
 COMMON_OBJS += grabber_andor.o
-else
-COMMON_OBJS += grabber_andor_fake.o
 endif
+endif
+
+ifdef ANDOR2
+LDLIBS  += -landor
+TARGETS += test_andor2 fast
+COMMON_OBJS += grabber_andor2.o
 endif
 
 # PVCAM
@@ -84,6 +92,19 @@ LDLIBS += -L/c/Program\ Files/vs-lib3/sdk/lib/i386/ -lvslib3
 TARGETS += test_vslib fast
 COMMON_OBJS += grabber_vslib.o
 endif
+endif
+
+# CSDU
+ifdef CSDU
+LDLIBS += -lstt_cam
+TARGETS += test_csdu fast
+COMMON_OBJS += grabber_csdu.o
+endif
+
+# Fake grabber
+ifdef FAKE
+TARGETS += fast
+COMMON_OBJS += grabber_fake.o
 endif
 
 all: depend $(TARGETS)

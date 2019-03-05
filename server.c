@@ -699,26 +699,33 @@ void server_cycle(server_str *server, double wait)
     connection_str *connection;
     fd_set rset;
     fd_set wset;
+    fd_set eset;
     struct timeval tv;
 
     FD_ZERO(&rset);
     FD_ZERO(&wset);
+    FD_ZERO(&eset);
 
     /* Listen for new incoming connections on main socket */
     if(IS_SOCKET(server->socket))
         FD_SET(server->socket, &rset);
 
-    foreach(connection, server->connections)
+    foreach(connection, server->connections){
         if(IS_SOCKET(connection->socket)){
             if(connection->is_connected)
                 FD_SET(connection->socket, &rset);
-            if(connection->write_length || !connection->is_connected)
+            if(connection->write_length)
                 FD_SET(connection->socket, &wset);
+            if(!connection->is_connected){
+                FD_SET(connection->socket, &wset);
+                FD_SET(connection->socket, &eset);
+            }
         } else if(connection->is_active && !connection->is_waiting_for_restart){
             /* Try to restart the active connection */
             server_add_timer(server, 1, 0, restart_connection_callback, connection);
             connection->is_waiting_for_restart = TRUE;
         }
+    }
 
     /* Listen for custom socket events if requested */
     if(IS_SOCKET(server->custom_socket)){
@@ -732,10 +739,10 @@ void server_cycle(server_str *server, double wait)
     tv.tv_sec = 0;
     tv.tv_usec = 1e3*wait;
 
-    if(select(FD_SETSIZE, &rset, &wset, NULL, &tv) > 0){
+    if(select(FD_SETSIZE, &rset, &wset, &eset, &tv) > 0){
         /* Check already connected clients */
         foreach(connection, server->connections){
-            if(IS_SOCKET(connection->socket) && FD_ISSET(connection->socket, &wset)){
+            if(IS_SOCKET(connection->socket) && (FD_ISSET(connection->socket, &wset) || FD_ISSET(connection->socket, &eset))){
                 FD_CLR(connection->socket, &wset);
 
                 if(!connection->is_connected){
@@ -754,6 +761,7 @@ void server_cycle(server_str *server, double wait)
                         if(!connection->is_active)
                             dprintf("connect to %s:%d : %s\n",
                                     connection->host, connection->port, strerror(optval));
+
                         close(connection->socket);
                         connection->socket = INVALID_SOCKET;
                     }

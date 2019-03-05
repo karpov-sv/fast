@@ -6,6 +6,7 @@
 typedef struct {
     char *name;
     char *value;
+    char *text;
     int is_used;
 } command_token_str;
 
@@ -26,6 +27,7 @@ char *command_params(command_str *);
 char *command_params_with_prefix(command_str *, const char *, ...) __attribute__ ((format (printf, 2, 3)));
 char *command_params_as_hstore(command_str *);
 char *command_params_as_lua(command_str *);
+char *command_params_as_json(command_str *);
 int command_match(command_str *, const char *);
 void command_args(command_str *, ...);
 

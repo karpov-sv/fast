@@ -281,6 +281,8 @@ void grabber_add_buffer(grabber_str *grabber)
 
     posix_memalign((void **)&buf, 8, size);
 
+    dprintf("Allocating %lld bytes for a buffer %p\n", size, buf);
+
     i = AT_QueueBuffer(grabber->handle, buf, size);
 
     if(i != AT_SUCCESS){
@@ -299,11 +301,13 @@ void grabber_acquisition_start(grabber_str *grabber)
     for(d = 0; d < 10; d++)
         grabber_add_buffer(grabber);
 
+    dprintf("acquisition_start\n");
     AT_Command(grabber->handle, L"AcquisitionStart");
 }
 
 void grabber_acquisition_stop(grabber_str *grabber)
 {
+    dprintf("acquisition_stop\n");
     AT_Command(grabber->handle, L"AcquisitionStop");
     AT_Flush(grabber->handle);
     grabber_cleanup(grabber);
@@ -344,7 +348,8 @@ image_str *grabber_wait_image(grabber_str *grabber, double delay)
         return NULL;
 
     /* Remove the buffer from cleanup list */
-    g_hash_table_steal(grabber->chunks, buf);
+    if(!g_hash_table_steal(grabber->chunks, buf))
+        return NULL;
 
     grabber_add_buffer(grabber);
 
