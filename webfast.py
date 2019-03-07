@@ -103,6 +103,9 @@ class FastProtocol(Favor2Protocol):
 
         self.factory.object.status_counter = 0
 
+        self.wait_current = False
+        self.wait_total = False
+
         Favor2Protocol.connectionMade(self)
 
     def connectionLost(self, reason):
@@ -117,9 +120,13 @@ class FastProtocol(Favor2Protocol):
 
     def requestStatus(self):
         self.message("get_status")
-        self.message("get_current_frame")
+        if not self.wait_current:
+            self.wait_current = True
+            self.message("get_current_frame")
         #if self.factory.object.status_counter == 0:
-        self.message("get_total_frame")
+        if not self.wait_total:
+            self.wait_total = True
+            self.message("get_total_frame")
 
         self.factory.object.status_counter += 1
         if self.factory.object.status_counter > 10:
@@ -129,6 +136,7 @@ class FastProtocol(Favor2Protocol):
         command = immp.parse(string)
 
         if command.name() == 'current_frame':
+            self.wait_current = False
             self.is_binary = True
             self.binary_length = int(command.kwargs.get('length', 0))
             self.image_format = command.kwargs.get('format', '')
@@ -136,13 +144,20 @@ class FastProtocol(Favor2Protocol):
                 self.factory.object.fast_status['image_mean'] = float(command.kwargs.get('mean', 0))
             self.image_type = 'current'
 
+        elif command.name() == 'current_frame_timeout':
+            self.wait_current = False
+
         elif command.name() == 'total_frame':
+            self.wait_total = False
             self.is_binary = True
             self.binary_length = int(command.kwargs.get('length', 0))
             self.image_format = command.kwargs.get('format', '')
             self.image_type = 'total'
 
-        elif command.name() == 'fast_status':
+        elif command.name() == 'total_frame_timeout':
+            self.wait_total = False
+
+        elif command.name() == 'fast_status' or command.name() == 'status':
             self.factory.object.fast_status = command.kwargs
             if command.kwargs.get('acquisition') == '0':
                 self.factory.object.time = []
@@ -301,32 +316,39 @@ class WebFast(Resource):
             request.responseHeaders.setRawHeaders("Cache-Control", ['no-store, no-cache, must-revalidate, max-age=0'])
             return s.getvalue()
 
-
         else:
             return q.path
 
 # Main
 if __name__ == '__main__':
+    from optparse import OptionParser
+
+    parser = OptionParser(usage="usage: %prog [options] ...")
+    parser.add_option('-p', '--port', help='Daemon port', action='store', dest='port', type='int', default=5555)
+    parser.add_option('-H', '--http-port', help='HTTP server port', action='store', dest='http_port', type='int', default=8888)
+
+    (options,args) = parser.parse_args()
+
     fast = Fast()
 
     fast.factory = Favor2ClientFactory(FastProtocol, fast)
 
     from twisted.internet import reactor
-    reactor.connectTCP('localhost', 5555, fast.factory)
+    reactor.connectTCP('localhost', options.port, fast.factory)
 
     passwd = {'fast':'fast'}
 
     # Serve files from web
     root = File("web")
     # ...with some other paths handled also
-    root.putChild("", File('web/webphotometer.html'))
-    root.putChild("fast.html", File('web/webphotometer.html'))
+    root.putChild("", File('web/webfast.html'))
+    root.putChild("fast.html", File('web/webfast.html'))
 
     root.putChild("fast", WebFast(fast, base='/fast'))
 
     #site = Site(Auth(root, passwd))
     site = Site(root)
 
-    reactor.listenTCP(8888, site)
+    reactor.listenTCP(options.http_port, site)
 
     reactor.run()

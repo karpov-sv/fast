@@ -53,154 +53,9 @@ Fast = function(parent_id, base="/fast", title="FAST"){
     /* Controls */
     var tmp = $("<div/>", {class: "list-group-item"}).appendTo(list);
     this.controls = $("<ul/>", {class:"list-inline"}).appendTo(tmp);
+    this.controls_type = "";
 
-    if(this.title != "Guider"){
-        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
-        this.makeButton("Acquisition:").appendTo(tmp);
-        this.acquisition_start = this.makeButton("Start", "start").appendTo(tmp);
-        this.acquisition_stop = this.makeButton("Stop", "stop").appendTo(tmp);
-    }
-
-    if(this.title != "Old Guider"){
-        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
-        this.makeButton("Storage:").appendTo(tmp);
-        this.storage_start = this.makeButton("Start", "storage_start").appendTo(tmp);
-        this.storage_stop = this.makeButton("Stop", "storage_stop").appendTo(tmp);
-    }
-
-    if(this.title != "Old Guider"){
-        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
-        this.makeButton("Set Object",
-                        function() {
-                            bootbox.prompt({
-                                title: "Object Name",
-                                value: this.last_status['object'],
-                                callback: $.proxy(function(result){
-                                    if(result){
-                                        this.sendCommand("set_object " + result);
-                                    }
-                                }, this)
-                            });
-                        }, this).appendTo(tmp);
-
-        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
-        this.makeButton("Scale:").appendTo(tmp);
-        this.makeButton("Full", "jpeg_params 0 1").appendTo(tmp);
-        this.makeButton("99%", "jpeg_params 0.01 0.99").appendTo(tmp);
-        this.makeButton("95%", "jpeg_params 0.05 0.95").appendTo(tmp);
-        this.makeButton("90%", "jpeg_params 0.1 0.9").appendTo(tmp);
-
-        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
-        this.makeButton("Total Img", function() {popupImage(this.base+'/total_image.jpg', 'Total image', 1)}).appendTo(tmp);
-        this.makeButton("Total Flux", function() {popupImage(this.base+'/total_flux.jpg', 'Light Curve - Total', 1)}).appendTo(tmp);
-        this.makeButton("Current Flux", function() {popupImage(this.base+'/current_flux.jpg', 'Light Curve - Current', 1)}).appendTo(tmp);
-    }
-
-
-    tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
-    this.makeButton("Exposure:").appendTo(tmp);
-    if(this.title == "Guider"){
-        this.makeButton("0.01", "set_grabber exposure=0.01").appendTo(tmp);
-        this.makeButton("0.128", "set_grabber exposure=0.128").appendTo(tmp);
-        this.makeButton("0.5", "set_grabber exposure=0.5").appendTo(tmp);
-        this.makeButton("1", "set_grabber exposure=1").appendTo(tmp);
-        this.makeButton("5", "set_grabber exposure=5").appendTo(tmp);
-        this.makeButton("10", "set_grabber exposure=10").appendTo(tmp);
-    } else if(this.title == "Old Guider"){
-        this.makeButton("0.5", "set_grabber exposure=0.5").appendTo(tmp);
-        this.makeButton("1", "set_grabber exposure=1").appendTo(tmp);
-        this.makeButton("5", "set_grabber exposure=5").appendTo(tmp);
-        this.makeButton("10", "set_grabber exposure=10").appendTo(tmp);
-    } else {
-        this.makeButton("0.01", "set_grabber exposure=0.01").appendTo(tmp);
-        this.makeButton("0.1", "set_grabber exposure=0.1").appendTo(tmp);
-        this.makeButton("0.2", "set_grabber exposure=0.2").appendTo(tmp);
-        this.makeButton("0.5", "set_grabber exposure=0.5").appendTo(tmp);
-        this.makeButton("1", "set_grabber exposure=1").appendTo(tmp);
-        this.makeButton("5", "set_grabber exposure=5").appendTo(tmp);
-        this.makeButton("10", "set_grabber exposure=10").appendTo(tmp);
-    }
-
-    if(this.title == "Guider"){
-        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
-        this.makeButton("Amplification:").appendTo(tmp);
-        this.makeButton("Min", "set_grabber amplification=0").appendTo(tmp);
-        this.makeButton("Medium", "set_grabber amplification=511").appendTo(tmp);
-        this.makeButton("Max", "set_grabber amplification=1023").appendTo(tmp);
-    }
-
-    if(this.title == "FAST"){
-        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
-        this.makeButton("MGain:").appendTo(tmp);
-        this.makeButton("0", "set_grabber mgain=0").appendTo(tmp);
-        this.makeButton("1000", "set_grabber mgain=1000").appendTo(tmp);
-        this.makeButton("2000", "set_grabber mgain=2000").appendTo(tmp)
-        this.makeButton("3000", "set_grabber mgain=3000").appendTo(tmp);
-        this.makeButton("Max", "set_grabber mgain=4096").appendTo(tmp);
-
-        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
-        this.makeButton("Binning:").appendTo(tmp);
-        this.makeButton("1x1", "set_grabber binning=1").appendTo(tmp);
-        this.makeButton("2x2", "set_grabber binning=2").appendTo(tmp);
-        this.makeButton("3x3", "set_grabber binning=3").appendTo(tmp);
-        this.makeButton("4x4", "set_grabber binning=4").appendTo(tmp);
-
-        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
-        this.makeButton("Countdown:").appendTo(tmp);
-        this.makeButton("None", "set_countdown 0").appendTo(tmp);
-        this.makeButton("100", "set_countdown 100").appendTo(tmp);
-        this.makeButton("1000", "set_countdown 1000").appendTo(tmp);
-        this.makeButton("10000", "set_countdown 10000").appendTo(tmp);
-    }
-
-    if(this.title == "FAST"){
-        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
-        this.makeButton("Params: ").appendTo(tmp);
-        this.makeButton("Readout",
-                        function() {
-                            bootbox.prompt({
-                                title: "Readout Port",
-                                inputType: "select",
-                                inputOptions: [{text:"Multiplication", value:0},
-                                               {text:"Normal", value:1}],
-                                value: this.last_status['pvcam_port'],
-                                callback: $.proxy(function(result){
-                                    if(result){
-                                        this.sendCommand("set_grabber port=" + result);
-                                    }
-                                }, this)
-                            });
-                        }, this).appendTo(tmp);
-        this.makeButton("Clear",
-                        function() {
-                            bootbox.prompt({
-                                title: "Clear Mode",
-                                inputType: "select",
-                                inputOptions: [{text:"Never", value:0},
-                                               {text:"Pre-Exposure", value:1},
-                                               {text:"Pre-Sequence", value:2}],
-                                value: this.last_status['pvcam_clear'],
-                                callback: $.proxy(function(result){
-                                    if(result){
-                                        this.sendCommand("set_grabber clear=" + result);
-                                    }
-                                }, this)
-                            });
-                        }, this).appendTo(tmp);
-    }
-
-    tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
-    this.makeButton("Exit",
-                    function() {
-                        bootbox.confirm({
-                            message: "Are you sure you want to stop the daemon?",
-                            callback: $.proxy(function(result){
-                                if(result){
-                                    this.sendCommand("exit");
-                                }
-                            }, this)
-                        });
-                    }, this).appendTo(tmp);
+    this.makeControls("");
 
     this.cmdline = $("<input>", {type:"text", size:"40", class:"form-control"});
 
@@ -247,6 +102,204 @@ Fast = function(parent_id, base="/fast", title="FAST"){
     this.requestState();
 }
 
+Fast.prototype.makeControls = function(type){
+    this.controls.html("");
+
+    if(type != "vs2001"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Acquisition:").appendTo(tmp);
+        this.acquisition_start = this.makeButton("Start", "start").appendTo(tmp);
+        this.acquisition_stop = this.makeButton("Stop", "stop").appendTo(tmp);
+    }
+
+    if(type != "vs56"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Storage:").appendTo(tmp);
+        this.storage_start = this.makeButton("Start", "storage_start").appendTo(tmp);
+        this.storage_stop = this.makeButton("Stop", "storage_stop").appendTo(tmp);
+    }
+
+    if(type != "vs56"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Set Object",
+                        function() {
+                            bootbox.prompt({
+                                title: "Object Name",
+                                value: this.last_status['object'],
+                                callback: $.proxy(function(result){
+                                    if(result){
+                                        this.sendCommand("set_object " + result);
+                                    }
+                                }, this)
+                            });
+                        }, this).appendTo(tmp);
+
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Scale:").appendTo(tmp);
+        this.makeButton("Full", "jpeg_params 0 1").appendTo(tmp);
+        if(type == "csdu" || type == "andor2")
+            this.makeButton("99.9%", "jpeg_params 0.01 0.999").appendTo(tmp);
+        this.makeButton("99%", "jpeg_params 0.01 0.99").appendTo(tmp);
+        this.makeButton("95%", "jpeg_params 0.05 0.95").appendTo(tmp);
+        this.makeButton("90%", "jpeg_params 0.1 0.9").appendTo(tmp);
+
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Total Img", function() {popupImage(this.base+'/total_image.jpg', 'Total image', 1)}).appendTo(tmp);
+        this.makeButton("Total Flux", function() {popupImage(this.base+'/total_flux.jpg', 'Light Curve - Total', 1)}).appendTo(tmp);
+        this.makeButton("Current Flux", function() {popupImage(this.base+'/current_flux.jpg', 'Light Curve - Current', 1)}).appendTo(tmp);
+    }
+
+    tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+    this.makeButton("Exposure:").appendTo(tmp);
+    if(type == "vs2001" || type == "csdu"){
+        this.makeButton("0.01", "set_grabber exposure=0.01").appendTo(tmp);
+        this.makeButton("0.128", "set_grabber exposure=0.128").appendTo(tmp);
+        this.makeButton("0.5", "set_grabber exposure=0.5").appendTo(tmp);
+        this.makeButton("1", "set_grabber exposure=1").appendTo(tmp);
+        this.makeButton("5", "set_grabber exposure=5").appendTo(tmp);
+        this.makeButton("10", "set_grabber exposure=10").appendTo(tmp);
+    } else if(type == "vs56"){
+        this.makeButton("0.5", "set_grabber exposure=0.5").appendTo(tmp);
+        this.makeButton("1", "set_grabber exposure=1").appendTo(tmp);
+        this.makeButton("5", "set_grabber exposure=5").appendTo(tmp);
+        this.makeButton("10", "set_grabber exposure=10").appendTo(tmp);
+    } else if(type == "andor2"){
+        this.makeButton("0", "set_grabber exposure=0").appendTo(tmp);
+        this.makeButton("0.01", "set_grabber exposure=0.01").appendTo(tmp);
+        this.makeButton("0.03", "set_grabber exposure=0.03").appendTo(tmp);
+        this.makeButton("0.1", "set_grabber exposure=0.1").appendTo(tmp);
+        this.makeButton("0.5", "set_grabber exposure=0.5").appendTo(tmp);
+        this.makeButton("1", "set_grabber exposure=1").appendTo(tmp);
+        this.makeButton("5", "set_grabber exposure=5").appendTo(tmp);
+        this.makeButton("10", "set_grabber exposure=10").appendTo(tmp);
+    } else {
+        this.makeButton("0.01", "set_grabber exposure=0.01").appendTo(tmp);
+        this.makeButton("0.1", "set_grabber exposure=0.1").appendTo(tmp);
+        this.makeButton("0.2", "set_grabber exposure=0.2").appendTo(tmp);
+        this.makeButton("0.5", "set_grabber exposure=0.5").appendTo(tmp);
+        this.makeButton("1", "set_grabber exposure=1").appendTo(tmp);
+        this.makeButton("5", "set_grabber exposure=5").appendTo(tmp);
+        this.makeButton("10", "set_grabber exposure=10").appendTo(tmp);
+    }
+
+    if(type == "vs2001" || type == "csdu"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Amplification:").appendTo(tmp);
+        this.makeButton("Min", "set_grabber amplification=0").appendTo(tmp);
+        this.makeButton("Default", "set_grabber amplification=170").appendTo(tmp);
+        this.makeButton("Medium", "set_grabber amplification=511").appendTo(tmp);
+        this.makeButton("Max", "set_grabber amplification=1023").appendTo(tmp);
+    }
+
+    if(type == "andor2"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Amplification:").appendTo(tmp);
+        this.makeButton("Min", "set_grabber amplification=0").appendTo(tmp);
+        this.makeButton("Medium", "set_grabber amplification=150").appendTo(tmp);
+        this.makeButton("Max", "set_grabber amplification=300").appendTo(tmp);
+    }
+
+    if(type == "pvcam"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("MGain:").appendTo(tmp);
+        this.makeButton("0", "set_grabber mgain=0").appendTo(tmp);
+        this.makeButton("1000", "set_grabber mgain=1000").appendTo(tmp);
+        this.makeButton("2000", "set_grabber mgain=2000").appendTo(tmp)
+        this.makeButton("3000", "set_grabber mgain=3000").appendTo(tmp);
+        this.makeButton("Max", "set_grabber mgain=4096").appendTo(tmp);
+    }
+    if(type == "pvcam" || type == "csdu" || type == "andor2"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Binning:").appendTo(tmp);
+        this.makeButton("1x1", "set_grabber binning=1").appendTo(tmp);
+        this.makeButton("2x2", "set_grabber binning=2").appendTo(tmp);
+        this.makeButton("4x4", "set_grabber binning=4").appendTo(tmp);
+    }
+
+    if(type == "andor2"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Window:").appendTo(tmp);
+        this.makeButton("Full", "set_grabber x1=1 y1=1 x2=1024 y2=1024").appendTo(tmp);
+        this.makeButton("1/2", "set_grabber x1=257 y1=257 x2=768 y2=768").appendTo(tmp);
+        this.makeButton("1/4", "set_grabber x1=385 y1=385 x2=640 y2=640").appendTo(tmp);
+    }
+
+    if(type == "pvcam" || type == "andor" || type == "andor2"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Countdown:").appendTo(tmp);
+        this.makeButton("None", "set_countdown 0").appendTo(tmp);
+        this.makeButton("100", "set_countdown 100").appendTo(tmp);
+        this.makeButton("1000", "set_countdown 1000").appendTo(tmp);
+        this.makeButton("10000", "set_countdown 10000").appendTo(tmp);
+    }
+
+    if(type == "pvcam"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Params: ").appendTo(tmp);
+        this.makeButton("Readout",
+                        function() {
+                            bootbox.prompt({
+                                title: "Readout Port",
+                                inputType: "select",
+                                inputOptions: [{text:"Multiplication", value:0},
+                                               {text:"Normal", value:1}],
+                                value: this.last_status['pvcam_port'],
+                                callback: $.proxy(function(result){
+                                    if(result){
+                                        this.sendCommand("set_grabber port=" + result);
+                                    }
+                                }, this)
+                            });
+                        }, this).appendTo(tmp);
+        this.makeButton("Clear",
+                        function() {
+                            bootbox.prompt({
+                                title: "Clear Mode",
+                                inputType: "select",
+                                inputOptions: [{text:"Never", value:0},
+                                               {text:"Pre-Exposure", value:1},
+                                               {text:"Pre-Sequence", value:2}],
+                                value: this.last_status['pvcam_clear'],
+                                callback: $.proxy(function(result){
+                                    if(result){
+                                        this.sendCommand("set_grabber clear=" + result);
+                                    }
+                                }, this)
+                            });
+                        }, this).appendTo(tmp);
+    }
+
+    if(type == "pvcam" || type == "andor2"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Cooling:").appendTo(tmp);
+        this.makeButton("Off", "set_grabber cooling=0").appendTo(tmp);
+        this.makeButton("On", "set_grabber cooling=1").appendTo(tmp);
+
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Shutter:").appendTo(tmp);
+        this.makeButton("Auto", "set_grabber shutter=0").appendTo(tmp);
+        this.makeButton("Open", "set_grabber shutter=1").appendTo(tmp);
+        this.makeButton("Close", "set_grabber shutter=2").appendTo(tmp);
+    }
+
+    tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+    this.makeButton("Exit",
+                    function() {
+                        bootbox.confirm({
+                            message: "Are you sure you want to stop the daemon?",
+                            callback: $.proxy(function(result){
+                                if(result){
+                                    this.sendCommand("exit");
+                                }
+                            }, this)
+                        });
+                    }, this).appendTo(tmp);
+
+
+
+    this.controls_type = type;
+}
+
 Fast.prototype.requestState = function(){
     $.ajax({
         url: this.base + "/status",
@@ -288,6 +341,11 @@ Fast.prototype.updateStatus = function(connected, status){
             this.connstatus.html("Connected");
             this.connstatus.removeClass("label-danger").addClass("label-success");
         }
+
+        types = ["pvcam", "csdu", "vs2001", "vs56", "andor", "andor2"];
+        for(var i = 0; i < types.length; i++)
+            if(status[types[i]] == '1' && this.controls_type != types[i])
+                this.makeControls(types[i]);
 
         var state = "Acquisition: ";
         if(status['acquisition'] == '1'){
@@ -334,6 +392,8 @@ Fast.prototype.updateStatus = function(connected, status){
             state += " Free: " + label((status['free_disk_space']/1024/1024/1024).toFixed(1) + " Gb");
 
             if(status['acquisition'] == '1'){
+                state += " Frames: " + label(status['num_acquired']) + " / " + label(status['num_stored'])
+
                 state += " Last acquired: " + label((1.0*status['age_acquired']).toFixed(1), status['age_acquired'] < 1.0 ? "success" : "danger");
                 if(status['storage'] == '1')
                     state += " Last stored: " + label((1.0*status['age_stored']).toFixed(1), status['age_stored'] < 1.0 ? "success" : "danger");
@@ -343,14 +403,19 @@ Fast.prototype.updateStatus = function(connected, status){
         this.state.html(state);
 
         state = "Exposure: " + label(status['exposure']);
-        if(status['pvcam'] == '1'){
+        if(status['pvcam'] == '1' || status['csdu'] == '1' || status['andor2'] == '1'){
             state += " FPS: ";
             if(status['acquisition'] == '1')
                 state += label((1.0*status['fps']).toPrecision(3));
             else
                 state += label("-");
         }
-        if(status['pvcam'] == '1'){
+        if(status['andor'] == '1'){
+            state += " FPS: " + label(status['fps']);
+        }
+        if(status['csdu'] == '1'){
+            state += " Binning: " + label(status['binning']+"x"+status['binning']);
+        } else if(status['pvcam'] == '1'){
             state += " PMode: ";
             if(status['pvcam_pmode'] == '0')
                 state += label('Normal');
@@ -379,9 +444,37 @@ Fast.prototype.updateStatus = function(connected, status){
 
             state += " Temperature: " + label(status['temperature']);
 
-        } else if(status['vslib'] == '1'){
+        } else if(status['andor'] == '1'){
+            temperaturestatus = {0:'Off', 1:'Cooling', 2:'Stabilized', 3:'Drift', 4:'Not Stabilized', 5:'Fault', 6:'Overheating'};
+            shutterstatus = {0:'Rolling', 1:'Global'};
+
+            state += " Cooling: " + label(status['cooling'] == '0' ? 'Off' : 'On');
+            state += " Temperature: " + label(status['temperature']) + ' ' + label(temperaturestatus[status['temperaturestatus']]);
+            state += " Shutter: " + label(shutterstatus[status['shutter']]);
+            state += " Binning: " + label(status['binning']+"x"+status['binning']) + ' ' +
+                label(status['x1'] + ' ' + status['y1'] + ' ' + status['x2'] + ' ' + status['y2']);
+        } else if(status['andor2'] == '1'){
+            temperaturestatus = {20034:'Off', 20035:'Not Stabilized', 20036:'Stabilized', 20037:'Cooling'};
+            shutterstatus = {0:'Auto', 1:'Open', 2:'Closed'};
+
+            state += " Cooling: " + label(status['cooling'] == '0' ? 'Off' : 'On');
+            state += " Temperature: " + label(status['temperature']) + ' ' + label(temperaturestatus[status['temperaturestatus']]);
+            state += " Shutter: " + label(shutterstatus[status['shutter']]);
+            state += " Binning: " + label(status['binning']+"x"+status['binning']) + ' ' +
+                label(status['x1'] + ' ' + status['y1'] + ' ' + status['x2'] + ' ' + status['y2']);
+            state += " VS: " + label(status['vsspeed']);
+            state += " HS: " + label(status['hsspeed']) + ' ' + label(status['speed']) + ' MHz';
+        }
+
+        if(status['vslib'] == '1' || status['csdu'] == '1' || status['andor2'] == '1'){
             state += " Amplification: " + label(status['amplification']);
         }
+
+        // state += " Postprocess: " + label(status['postprocess'] == '0' ? 'Off' : 'On');
+        if(status['dark'] == '1')
+            state += " " + label("Dark", "success");
+        else
+            state += " " + label("No Dark", "warning");
 
         this.status.html(state);
     } else {
