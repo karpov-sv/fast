@@ -147,7 +147,7 @@ void process_grabber_command(grabber_str *grabber, char *string)
         if(binning >= 0 && binning < 4)
             grabber_set_binning(grabber, binning);
 #elif ANDOR
-        double exposure = 0.03;
+        double exposure = 0.0;
         int binning = -1;
         int shutter = -1;
         int preamp = -1;
@@ -312,7 +312,7 @@ void *grabber_worker(void *data)
             is_first = FALSE;
             image_delete(image);
         } else {
-#if ANDOR2
+#if ANDOR || ANDOR2
             /* Just update status and parameters */
             if(1e-3*time_interval(last_update_time, time_current()) > 1 && !grabber_is_acquiring(fast->grabber)){
                 grabber_update(fast->grabber);

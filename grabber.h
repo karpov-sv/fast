@@ -16,14 +16,29 @@ typedef struct {
     time_str time0;
     /* Memory chunks */
     GHashTable *chunks;
+    /* Status */
+    double exposure;
+    double fps;
+    int binning;
+
+    time_str temperature_time;
+    double temperature;
+    int temperaturestatus;
+    int cooling;
+
+    int shutter;
+
 } grabber_str;
 
+AT_BOOL is_implemented(AT_H , const wchar_t *);
 AT_64 get_int(AT_H , const wchar_t *);
 AT_BOOL get_bool(AT_H , const wchar_t *);
 double get_float(AT_H , const wchar_t *);
 AT_WC *get_string(AT_H , const wchar_t *);
 int get_enum_index(AT_H , const wchar_t *);
 AT_WC *get_enum_string(AT_H , const wchar_t *);
+
+void grabber_update(grabber_str *);
 
 #endif /* ANDOR */
 

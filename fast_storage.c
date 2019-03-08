@@ -7,6 +7,7 @@
 #include "fast.h"
 
 #define FITS_COMPRESS 1
+#define MAX_FILES_PER_DIR 10000
 
 typedef struct {
     fast_str *fast;
@@ -20,18 +21,21 @@ void prepare_storage(storage_str *storage, char *object)
     time_str time = time_current();
     char *datedir = make_string("%s/%04d_%02d_%02d", storage->fast->base,
                                 time.year, time.month, time.day);
+    char *objdir = make_string("%s/%s", datedir, object);
 
 #ifndef __MINGW32__
     mkdir(storage->fast->base, 0755);
     mkdir(datedir, 0755);
+    mkdir(objdir, 0755);
 #else
     mkdir(storage->fast->base);
     mkdir(datedir);
+    mkdir(objdir);
 #endif
     if(storage->current)
         free(storage->current);
 
-    storage->current = make_string("%s/%s_%04d%02d%02d_%02d%02d%02d", datedir, object,
+    storage->current = make_string("%s/%04d%02d%02d_%02d%02d%02d", objdir,
                                    time.year, time.month, time.day,
                                    time.hour, time.minute, time.second);
 
@@ -43,6 +47,7 @@ void prepare_storage(storage_str *storage, char *object)
 
     dprintf("Will write files to %s\n", storage->current);
 
+    free(objdir);
     free(datedir);
 }
 
@@ -82,7 +87,6 @@ void store_total_image(storage_str *storage, image_str *image)
     image_delete(image);
 }
 
-
 void *storage_worker(void *data)
 {
     fast_str *fast = (fast_str *)data;
@@ -117,7 +121,7 @@ void *storage_worker(void *data)
 
         case FAST_MSG_IMAGE:
             if(fast->is_storage){
-                if(storage.nframes >= 10000){
+                if(storage.nframes >= MAX_FILES_PER_DIR){
                     prepare_storage(&storage, fast->object);
                     storage.nframes = 0;
                 }

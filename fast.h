@@ -12,6 +12,8 @@ typedef struct {
     server_str *server;
     server_str *web;
 
+    char *name;
+
     queue_str *server_queue;
     queue_str *grabber_queue;
     queue_str *storage_queue;
@@ -29,6 +31,10 @@ typedef struct {
     int running_length;
     int running_accum_length;
     double running_time;
+
+    /* Statistics */
+    double flux;
+    double mean;
 
     image_str *dark;
 
@@ -55,6 +61,8 @@ typedef struct {
 
     int is_acquisition;
     int is_storage;
+
+    int is_broadcast_flux;
 
     int is_quit;
 } fast_str;

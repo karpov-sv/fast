@@ -33,6 +33,7 @@ fast_str *fast_create()
 
     fast->object = "test";
     fast->base = "IMG";
+    fast->name = "fast";
 
     fast->image = NULL;
     fast->image_total = NULL;
@@ -66,6 +67,8 @@ fast_str *fast_create()
 
     fast->is_acquisition = FALSE;
     fast->is_storage = FALSE;
+
+    fast->is_broadcast_flux = TRUE;
 
     return fast;
 }
@@ -237,14 +240,16 @@ void process_image(fast_str *fast, image_str *image)
 
     if(fast->image){
         double t = 1e-3*time_interval(fast->time_start, image->time);
-        double mean = 0;
-        double flux = get_flux(fast, image, 1, &mean);
+        /* double mean = 0; */
+        /* double flux = get_flux(fast, image, 1, &mean); */
         connection_str *conn = NULL;
+
+        fast->flux = get_flux(fast, image, 1, &fast->mean);
 
         /* Simple photometry (whole frame or ROI) */
         foreach(conn, fast->server->connections)
-            if(conn->is_connected)
-                server_connection_message(conn, "current_flux time=%g flux=%g mean=%g", t, flux, mean);
+            if(conn->is_connected && fast->is_broadcast_flux)
+                server_connection_message(conn, "current_flux time=%g flux=%g mean=%g", t, fast->flux, fast->mean);
 
         fast->time_last_acquired = image->time;
 
@@ -310,7 +315,7 @@ void process_image(fast_str *fast, image_str *image)
             flux = get_flux(fast, fast->running, fast->running_length, &mean);
 
             foreach(conn, fast->server->connections)
-                if(conn->is_connected)
+                if(conn->is_connected && fast->is_broadcast_flux)
                     server_connection_message(conn, "accumulated_flux time=%g flux=%g mean=%g", t, flux, mean);
         }
 
@@ -332,7 +337,7 @@ void reset_images(fast_str *fast)
 
 char *get_status_string(fast_str *fast)
 {
-    char *status = make_string("fast_status acquisition=%d storage=%d"
+    char *status = make_string("status acquisition=%d storage=%d"
                                " object=%s age_acquired=%g age_stored=%g"
                                " countdown=%d postprocess=%d dark=%d"
                                " accumulation=%g"
@@ -342,34 +347,26 @@ char *get_status_string(fast_str *fast)
                                " free_disk_space=%lld"
 #endif
                                " region_x1=%d region_y1=%d region_x2=%d region_y2=%d"
+                               " flux=%g mean=%g"
                                " num_acquired=%d num_stored=%d",
                                fast->is_acquisition, fast->is_storage, fast->object,
                                1e-3*time_interval(fast->time_last_acquired, time_current()),
                                1e-3*time_interval(fast->time_last_stored, time_current()),
                                fast->countdown, fast->postprocess, fast->dark ? TRUE : FALSE,
                                fast->running_time,
-                               free_disk_space(fast->base),
+                               (long long int)free_disk_space(fast->base),
                                fast->region_x1, fast->region_y1, fast->region_x2, fast->region_y2,
+                               fast->flux, fast->mean,
                                fast->total_length, fast->stored_length);
 
 #ifdef ANDOR
-        add_to_string(&status, " andor=1 exposure=%g actualexposure=%g readout=%g fps=%g"
-                      " binning=%ls shutter=%d rate=%d"
-                      " filter=%d overlap=%d cooling=%d"
+        add_to_string(&status, " andor=1 exposure=%g fps=%g"
+                      " binning=%ls shutter=%d"
+                      " cooling=%d"
                       " temperature=%g temperaturestatus=%d",
-                      get_float(fast->grabber->handle, L"ExposureTime"),
-                      get_float(fast->grabber->handle, L"ActualExposureTime"),
-                      get_float(fast->grabber->handle, L"ReadoutTime"),
-                      get_float(fast->grabber->handle, L"Frame Rate"),
-                      get_enum_string(fast->grabber->handle, L"AOIBinning"),
-                      get_enum_index(fast->grabber->handle, L"ElectronicShutteringMode"),
-                      get_enum_index(fast->grabber->handle, L"PixelReadoutRate"),
-                      get_bool(fast->grabber->handle, L"SpuriousNoiseFilter"),
-                      get_bool(fast->grabber->handle, L"Overlap"),
-                      get_bool(fast->grabber->handle, L"SensorCooling"),
-                      get_float(fast->grabber->handle, L"SensorTemperature"),
-                      get_enum_index(fast->grabber->handle, L"TemperatureStatus")
-                      );
+                      fast->grabber->exposure, fast->grabber->fps,
+                      fast->grabber->binning, fast->grabber->shutter,
+                      fast->grabber->cooling, fast->grabber->temperature, fast->grabber->temperaturestatus);
 #elif ANDOR2
     add_to_string(&status, " andor2=1 exposure=%g fps=%g amplification=%d binning=%d"
                   " temperature=%g temperaturestatus=%d"
@@ -413,9 +410,10 @@ void process_command(server_str *server, connection_str *connection, char *strin
     if(command_match(command, "exit") || command_match(command, "quit")){
         fast->is_quit = TRUE;
         server_connection_message(connection, "exit_ok");
+    } else if(command_match(command, "get_id")){
+        server_connection_message(connection, "id name=%s type=ccd", fast->name);
     } else if(command_match(command, "storage_start")){
         command_args(command, "object=%s", &fast->object, NULL);
-
         queue_add(fast->storage_queue, FAST_MSG_START, NULL);
         server_connection_message(connection, "%s_done", command_name(command));
     } else if(command_match(command, "storage_stop")){
@@ -428,6 +426,9 @@ void process_command(server_str *server, connection_str *connection, char *strin
     } else if(command_match(command, "stop")){
         queue_add(fast->grabber_queue, FAST_MSG_STOP, NULL);
         server_connection_message(connection, "%s_done", command_name(command));
+    } else if(command_match(command, "set_base")){
+        command_args(command, "base=%s", &fast->base, NULL);
+        server_connection_message(connection, "%s_done", command_name(command));
     } else if(command_match(command, "set_object")){
         command_args(command, "object=%s", &fast->object, NULL);
         server_connection_message(connection, "%s_done", command_name(command));
@@ -439,6 +440,9 @@ void process_command(server_str *server, connection_str *connection, char *strin
         server_connection_message(connection, "%s_done", command_name(command));
     } else if(command_match(command, "set_postprocess")){
         command_args(command, "postprocess=%d", &fast->postprocess, NULL);
+        server_connection_message(connection, "%s_done", command_name(command));
+    } else if(command_match(command, "set_broadcast_flux")){
+        command_args(command, "broadcast_flux=%d", &fast->is_broadcast_flux, NULL);
         server_connection_message(connection, "%s_done", command_name(command));
     } else if(command_match(command, "set_dark")){
         char *filename = NULL;
@@ -554,7 +558,7 @@ void process_command(server_str *server, connection_str *connection, char *strin
         if(cmap >= 0)
             image_jpeg_set_colormap(cmap);
     } else
-        dprintf("Unknown command: %s", command_name(command));
+        dprintf("Unknown command: %s\n", command_name(command));
 
     command_delete(command);
 }
@@ -656,7 +660,7 @@ void process_web(server_str *server, connection_str *connection, char *string, v
                                              "Pragma: no-cache\n"
                                              "Expires: Mon, 3 Jan 2000 12:34:56 GMT\n"
                                              "Content-Length: %d"
-                                             "Content-Type: text/json\n\n%s\n", strlen(ejson), ejson);
+                                             "Content-Type: text/json\n\n%s\n", (int)strlen(ejson), ejson);
 
             free(ejson);
             free(json);
@@ -742,6 +746,7 @@ int main(int argc, char **argv)
     parse_args(argc, argv,
                "port=%d", &port,
                "base=%s", &fast->base,
+               "name=%s", &fast->name,
                "dark=%s", &dark_filename,
                "web_port=%d", &web_port,
 
@@ -761,6 +766,8 @@ int main(int argc, char **argv)
 
                "-start", &is_start,
                "-web", &is_web,
+               "-flux", &fast->is_broadcast_flux,
+
                NULL);
 
     dprintf("base=%s\n", fast->base);
