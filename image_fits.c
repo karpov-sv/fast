@@ -71,11 +71,11 @@ static void image_keywords_from_fits(image_str *image, fitsfile *fits)
 
 static void image_keywords_to_fits(image_str *image, fitsfile *fits)
 {
-    int status = 0;
     int d;
 
     for(d = 0; d < image->Nkeywords; d++){
         image_keyword_str *kw = &image->keywords[d];
+        int status = 0;
 
         switch(kw->type){
         case 'I':
@@ -84,18 +84,18 @@ static void image_keywords_to_fits(image_str *image, fitsfile *fits)
 
                 sscanf(kw->unquoted, "%d", &value);
                 fits_update_key(fits, TINT, kw->key, &value, kw->comment, &status);
-            break;
+                break;
             }
         case 'F':
             {
                 double value = 0;
 
                 sscanf(kw->unquoted, "%lf", &value);
-                fits_update_key(fits, TDOUBLE, kw->key, &value, kw->comment, &status);
-            break;
+                if(isfinite(value))
+                    fits_update_key(fits, TDOUBLE, kw->key, &value, kw->comment, &status);
+                break;
             }
         default:
-            status = 0;
             fits_update_key(fits, TSTRING, kw->key, kw->unquoted, kw->comment, &status);
             break;
         }

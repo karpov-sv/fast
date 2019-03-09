@@ -574,10 +574,11 @@ void process_command(server_str *server, connection_str *connection, char *strin
 
                 image_keyword_add(fast->kw, command->tokens[i].name, command->tokens[i].value, NULL);
             }
+    } else if(command_match(command, "show_keywords")){
+        int i;
 
         for(i = 0; i < fast->kw->Nkeywords; i++)
             dprintf(" %c %s = %s\n", fast->kw->keywords[i].type, fast->kw->keywords[i].key, fast->kw->keywords[i].value);
-
     } else
         dprintf("Unknown command: %s\n", command_name(command));
 
