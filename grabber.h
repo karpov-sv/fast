@@ -199,6 +199,10 @@ typedef struct {
     int binning;
 } grabber_str;
 
+void grabber_set_exposure(grabber_str *, double );
+void grabber_set_amplification(grabber_str *, int );
+void grabber_set_binning(grabber_str *, int );
+
 #endif /* FAKE */
 
 /* Common part */

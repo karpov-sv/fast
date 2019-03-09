@@ -10,7 +10,7 @@ grabber_str *grabber_create()
 {
     grabber_str *grabber = (grabber_str *)calloc(1, sizeof(grabber_str));
 
-    grabber->exposure = 0;
+    grabber->exposure = 0.1;
     grabber->fps = 0;
     grabber->amplification = 0;
     grabber->binning = 1;
@@ -66,7 +66,7 @@ image_str *grabber_wait_image(grabber_str *grabber, double delay)
 
     image->time = time_current();
 
-    usleep(50000);
+    usleep(1e6*grabber->exposure);
 
     image_keyword_add_double(image, "EXPOSURE", grabber->exposure, NULL);
     image_keyword_add_int(image, "AMPLIFY", grabber->amplification, NULL);
