@@ -29,6 +29,16 @@ static void command_push_arg(command_str *command, char *name, char *value, char
 {
     command->tokens = realloc(command->tokens, sizeof(command_token_str)*(command->length + 1));
 
+    if(*value == '"' || *value == '\''){
+        char *end;
+
+        value += 1;
+        end = value + strlen(value) - (strlen(value) ? 1 : 0);
+
+        if((*end == '"' || *end == '\''))
+            *end = '\0';
+    }
+
     command->tokens[command->length].name = name ? make_string("%s", name) : NULL;
     command->tokens[command->length].value = value ? make_string("%s", value) : NULL;
     command->tokens[command->length].text = text ? make_string("%s", text) : NULL;
