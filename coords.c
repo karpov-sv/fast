@@ -299,14 +299,6 @@ void coords_clear(coords_str *coords)
     memset(coords->B, 0, sizeof(double)*(MAX_SIP_ORDER + 1)*(MAX_SIP_ORDER + 1));
     memset(coords->AP, 0, sizeof(double)*(MAX_SIP_ORDER + 1)*(MAX_SIP_ORDER + 1));
     memset(coords->BP, 0, sizeof(double)*(MAX_SIP_ORDER + 1)*(MAX_SIP_ORDER + 1));
-
-    coords->filter = 0;
-    coords->mag_scale = 1;
-    coords->mag_scale_err = 0;
-    coords->mag0 = 0;
-    coords->mag0_err = 0;
-    coords->mag_covar = 0;
-    coords->mag_sigma = 0;
 }
 
 coords_str coords_empty()
@@ -372,16 +364,4 @@ void coords_get_ra_dec_shift(double ra0, double dec0, double ra, double dec, dou
 
     /* FIXME: is this correct? */
     coords_get_xi_eta_from_ra_dec(&coords, ra, dec, delta_ra_ptr, delta_dec_ptr);
-}
-
-/* instr mag -> catalogue mag */
-/* Error is systematic error of this calibration, to be added to the flux error */
-double coords_get_mag(coords_str *coords, double instr, double x, double y, double *err_ptr)
-{
-    if(err_ptr)
-        *err_ptr = 0;//sqrt(coords->mag_scale_err*coords->mag_scale_err*instr*instr + coords->mag0_err*coords->mag0_err + 2*coords->mag_covar*instr);
-
-    //return coords->mag_scale*instr + coords->mag0;
-
-    return instr + coords->mag_C[0] + x*x*coords->mag_C[1] + x*coords->mag_C[2] + x*y*coords->mag_C[3] + y*coords->mag_C[4] + y*y*coords->mag_C[5];
 }

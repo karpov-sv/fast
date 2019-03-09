@@ -26,16 +26,6 @@ typedef struct {
 
     double ra0; /* CRVAL1 */
     double dec0; /* CRVAL2 */
-
-    int filter; /* Filter used for photometric calibration, 0 - Clear, 1 - B, 2 - V, 3 - R */
-    double mag_scale; /* Cat = mag_scale*Instr + mag0 */
-    double mag_scale_err;
-    double mag0; /* Cat = mag_scale*Instr + mag0 */
-    double mag0_err;
-    double mag_covar; /* Covariance of errors */
-    double mag_sigma; /* Sttdev of Cat - Instr */
-
-    double mag_C[6];
 } coords_str;
 
 /* x, y -> ra, dec */
@@ -60,9 +50,6 @@ double coords_get_eta(coords_str *, double , double );
 void coords_get_x_y(coords_str *, double , double , double *, double *);
 double coords_get_x(coords_str *, double , double );
 double coords_get_y(coords_str *, double , double );
-
-/* instr mag -> catalogue mag */
-double coords_get_mag(coords_str *, double , double , double , double *);
 
 void coords_clear(coords_str *);
 coords_str coords_empty();
