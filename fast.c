@@ -38,6 +38,8 @@ fast_str *fast_create()
     fast->image = NULL;
     fast->image_total = NULL;
 
+    fast->kw = image_create(0, 0);
+
     fast->total_length = 0;
     fast->total_exposure = 0;
 
@@ -80,6 +82,9 @@ void fast_delete(fast_str *fast)
 
     if(fast->image)
         image_delete(fast->image);
+
+    if(fast->kw)
+        image_delete(fast->kw);
 
     if(fast->grabber)
         grabber_delete(fast->grabber);
@@ -228,6 +233,11 @@ void postprocess_image(fast_str *fast, image_str *image, int length)
 
 void annotate_image(fast_str *fast, image_str *image)
 {
+    int i;
+
+    for(i = 0; i < fast->kw->Nkeywords; i++){
+        image_keyword_add_type(image, fast->kw->keywords[i].key, fast->kw->keywords[i].value, fast->kw->keywords[i].comment, fast->kw->keywords[i].type);
+    }
 }
 
 void process_image(fast_str *fast, image_str *image)
@@ -240,8 +250,6 @@ void process_image(fast_str *fast, image_str *image)
 
     if(fast->image){
         double t = 1e-3*time_interval(fast->time_start, image->time);
-        /* double mean = 0; */
-        /* double flux = get_flux(fast, image, 1, &mean); */
         connection_str *conn = NULL;
 
         fast->flux = get_flux(fast, image, 1, &fast->mean);
@@ -557,6 +565,19 @@ void process_command(server_str *server, connection_str *connection, char *strin
             image_jpeg_set_scale(scale);
         if(cmap >= 0)
             image_jpeg_set_colormap(cmap);
+    } else if(command_match(command, "set_keyword") || command_match(command, "set_keywords")){
+        int i;
+
+        for(i = 0; i < command->length; i++)
+            if(command->tokens[i].name){
+                /* dprintf("%s = %s\n", command->tokens[i].name, command->tokens[i].value); */
+
+                image_keyword_add(fast->kw, command->tokens[i].name, command->tokens[i].value, NULL);
+            }
+
+        for(i = 0; i < fast->kw->Nkeywords; i++)
+            dprintf(" %c %s = %s\n", fast->kw->keywords[i].type, fast->kw->keywords[i].key, fast->kw->keywords[i].value);
+
     } else
         dprintf("Unknown command: %s\n", command_name(command));
 

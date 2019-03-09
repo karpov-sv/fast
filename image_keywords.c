@@ -9,6 +9,11 @@
 
 image_keyword_str *image_keyword_add(image_str *image, char *key, char *value, char *comment)
 {
+    return image_keyword_add_type(image, key, value, comment, 0);
+}
+
+image_keyword_str *image_keyword_add_type(image_str *image, char *key, char *value, char *comment, char type)
+{
     image_keyword_str *kw = image_keyword_find(image, key);
     int status = 0;
 
@@ -36,7 +41,23 @@ image_keyword_str *image_keyword_add(image_str *image, char *key, char *value, c
     else
         *kw->comment = '\0';
 
-    kw->type = 'C'; /* String */
+    if(type)
+        kw->type = type; /* String */
+    else {
+        /* Try to guess type */
+        char *end = NULL;
+        long val = strtol(value, &end, 10);
+
+        if(!(end == value || *end != '\0')) {
+            kw->type = 'I';
+        } else {
+            double val = strtod(value, &end);
+            if(!(end == value || *end != '\0')) {
+                kw->type = 'F';
+            } else
+                kw->type = 'C';
+        }
+    }
 
     return kw;
 }
@@ -44,9 +65,7 @@ image_keyword_str *image_keyword_add(image_str *image, char *key, char *value, c
 void image_keyword_add_int(image_str *image, char *key, int value, char *comment)
 {
     char *string = make_string("%d", value);
-    image_keyword_str *kw = image_keyword_add(image, key, string, comment);
-
-    kw->type = 'I'; /* Int */
+    image_keyword_add_type(image, key, string, comment, 'I'); /* Int */
 
     free(string);
 }
@@ -54,9 +73,7 @@ void image_keyword_add_int(image_str *image, char *key, int value, char *comment
 void image_keyword_add_int64(image_str *image, char *key, u_int64_t value, char *comment)
 {
     char *string = make_string("%lld", value);
-    image_keyword_str *kw = image_keyword_add(image, key, string, comment);
-
-    kw->type = 'I'; /* Int */
+    image_keyword_add_type(image, key, string, comment, 'I'); /* Int */
 
     free(string);
 }
@@ -64,9 +81,7 @@ void image_keyword_add_int64(image_str *image, char *key, u_int64_t value, char 
 void image_keyword_add_double(image_str *image, char *key, double value, char *comment)
 {
     char *string = make_string("%.12g", value);
-    image_keyword_str *kw = image_keyword_add(image, key, string, comment);
-
-    kw->type = 'F'; /* Float */
+    image_keyword_add_type(image, key, string, comment, 'F'); /* Float */
 
     free(string);
 }
@@ -75,7 +90,7 @@ void image_keyword_add_time(image_str *image, char *key, time_str value, char *c
 {
     char *string = time_str_get_date_time(value);
 
-    image_keyword_add(image, key, string, comment);
+    image_keyword_add_type(image, key, string, comment, 'C');
 
     free(string);
 }
@@ -237,14 +252,6 @@ void image_keyword_add_coords(image_str *image, coords_str coords)
     }
 
     image_keyword_add_double(image, "PIXSCALE", coords_get_pixscale(&image->coords), "Estimated pixel scale, degrees");
-
-    image_keyword_add_int(image, "MAG_FILTER", image->coords.filter, "Filter (0 - Clear, 1 - B, 2 - V, 3 - R)");
-    /* image_keyword_add_double(image, "MAG_0", image->coords.mag0, "Cat = MAG_0 + MAG_SCALE*Instr"); */
-    /* image_keyword_add_double(image, "MAG_0_ERR", image->coords.mag0_err, "MAG_0 stderr"); */
-    /* image_keyword_add_double(image, "MAG_SCALE", image->coords.mag_scale, "Cat = MAG_0 + MAG_SCALE*Instr"); */
-    /* image_keyword_add_double(image, "MAG_SCALE_ERR", image->coords.mag_scale_err, "MAG_SCALE stderr"); */
-    /* image_keyword_add_double(image, "MAG_COVAR", image->coords.mag_covar, "Covariance of MAG_SCALE anf MAG_0"); */
-    image_keyword_add_double(image, "MAG_SIGMA", image->coords.mag_sigma, "Standard deviation of Cat - Instr");
 }
 
 coords_str image_keyword_get_coords(image_str *image)
@@ -299,14 +306,6 @@ coords_str image_keyword_get_coords(image_str *image)
                 }
             }
     }
-
-    coords.filter = image_keyword_get_int(image, "MAG_FILTER");
-    /* coords.mag0 = image_keyword_get_double(image, "MAG_0"); */
-    /* coords.mag0_err = image_keyword_get_double(image, "MAG_0_ERR"); */
-    /* coords.mag_scale = image_keyword_get_double(image, "MAG_SCALE"); */
-    /* coords.mag_scale_err = image_keyword_get_double(image, "MAG_SCALE_ERR"); */
-    /* coords.mag_covar = image_keyword_get_double(image, "MAG_COVAR"); */
-    coords.mag_sigma = image_keyword_get_double(image, "MAG_SIGMA");
 
     return coords;
 }

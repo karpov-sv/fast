@@ -74,6 +74,7 @@ image_str *image_convert_to_double(image_str *);
 
 /* Keyword stuff */
 image_keyword_str *image_keyword_add(image_str *, char *, char *, char *);
+image_keyword_str *image_keyword_add_type(image_str *, char *, char *, char *, char );
 void image_keyword_add_int(image_str *, char *, int , char *);
 void image_keyword_add_int64(image_str *, char *, u_int64_t , char *);
 void image_keyword_add_double(image_str *, char *, double , char *);

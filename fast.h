@@ -26,6 +26,9 @@ typedef struct {
     int total_length;
     double total_exposure;
 
+    /* Empty image just to store keywords */
+    image_str *kw;
+
     image_str *running;
     image_str *running_accum;
     int running_length;
