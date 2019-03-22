@@ -27,7 +27,7 @@ typedef struct {
     int cooling;
 
     int shutter;
-
+    int preamp;
 } grabber_str;
 
 AT_BOOL is_implemented(AT_H , const wchar_t *);
@@ -37,6 +37,7 @@ double get_float(AT_H , const wchar_t *);
 AT_WC *get_string(AT_H , const wchar_t *);
 int get_enum_index(AT_H , const wchar_t *);
 AT_WC *get_enum_string(AT_H , const wchar_t *);
+AT_WC *get_enum_string_by_index(AT_H , const wchar_t *, int );
 
 void grabber_update(grabber_str *);
 

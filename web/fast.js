@@ -144,6 +144,12 @@ Fast.prototype.makeControls = function(type){
         this.makeButton("90%", "jpeg_params 0.1 0.9").appendTo(tmp);
 
         tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Quality:").appendTo(tmp);
+        this.makeButton("10%", "jpeg_params quality=10").appendTo(tmp);
+        this.makeButton("50%", "jpeg_params quality=50").appendTo(tmp);
+        this.makeButton("95%", "jpeg_params quality=95").appendTo(tmp);
+
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
         this.makeButton("Total Img", function() {popupImage(this.base+'/total_image.jpg', 'Total image', 1)}).appendTo(tmp);
         this.makeButton("Total Flux", function() {popupImage(this.base+'/total_flux.jpg', 'Light Curve - Total', 1)}).appendTo(tmp);
         this.makeButton("Current Flux", function() {popupImage(this.base+'/current_flux.jpg', 'Light Curve - Current', 1)}).appendTo(tmp);
@@ -199,6 +205,21 @@ Fast.prototype.makeControls = function(type){
         this.makeButton("Max", "set_grabber amplification=300").appendTo(tmp);
     }
 
+    if(type == "andor"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Cooling:").appendTo(tmp);
+        this.makeButton("Off", "set_grabber cooling=0").appendTo(tmp);
+        this.makeButton("-10", "set_grabber cooling=1 temperature=-10").appendTo(tmp);
+        this.makeButton("-20", "set_grabber cooling=1 temperature=-20").appendTo(tmp);
+        this.makeButton("-30", "set_grabber cooling=1 temperature=-30").appendTo(tmp);
+        this.makeButton("-40", "set_grabber cooling=1 temperature=-40").appendTo(tmp);
+
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Preamp:").appendTo(tmp);
+        this.makeButton("12 bit", "set_grabber preamp=0").appendTo(tmp);
+        this.makeButton("16 bit", "set_grabber preamp=1").appendTo(tmp);
+   }
+
     if(type == "pvcam"){
         tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
         this.makeButton("MGain:").appendTo(tmp);
@@ -214,6 +235,16 @@ Fast.prototype.makeControls = function(type){
         this.makeButton("1x1", "set_grabber binning=1").appendTo(tmp);
         this.makeButton("2x2", "set_grabber binning=2").appendTo(tmp);
         this.makeButton("4x4", "set_grabber binning=4").appendTo(tmp);
+    }
+
+    if(type == "andor"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Binning:").appendTo(tmp);
+        this.makeButton("1x1", "set_grabber binning=0").appendTo(tmp);
+        this.makeButton("2x2", "set_grabber binning=1").appendTo(tmp);
+        this.makeButton("3x3", "set_grabber binning=2").appendTo(tmp);
+        this.makeButton("4x4", "set_grabber binning=3").appendTo(tmp);
+        this.makeButton("8x8", "set_grabber binning=4").appendTo(tmp);
     }
 
     if(type == "andor2"){
@@ -387,7 +418,7 @@ Fast.prototype.updateStatus = function(connected, status){
             if(status['countdown']*1.0 > 0)
                 state += " Countdown: " + label(status['countdown'], "warning");
 
-            state += " Mean: " + label(status['image_mean']);
+            state += " Mean: " + label(status['mean']);
 
             state += " Free: " + label((status['free_disk_space']/1024/1024/1024).toFixed(1) + " Gb");
 
@@ -447,12 +478,16 @@ Fast.prototype.updateStatus = function(connected, status){
         } else if(status['andor'] == '1'){
             temperaturestatus = {0:'Off', 1:'Cooling', 2:'Stabilized', 3:'Drift', 4:'Not Stabilized', 5:'Fault', 6:'Overheating'};
             shutterstatus = {0:'Rolling', 1:'Global'};
+            binning = {0:'1x1', 1:'2x2', 2:'3x3', 3:'4x4', 4:'8x8'}
+            preamp = {0:'12 bit', 1:'16 bit'}
 
             state += " Cooling: " + label(status['cooling'] == '0' ? 'Off' : 'On');
             state += " Temperature: " + label(status['temperature']) + ' ' + label(temperaturestatus[status['temperaturestatus']]);
             state += " Shutter: " + label(shutterstatus[status['shutter']]);
-            state += " Binning: " + label(status['binning']+"x"+status['binning']) + ' ' +
-                label(status['x1'] + ' ' + status['y1'] + ' ' + status['x2'] + ' ' + status['y2']);
+            state += " Preamp: " + label(preamp[status['preamp']]);
+            state += " Binning: " + label(binning[status['binning']]);
+            if(status['x1'])
+                state += ' ' + label(status['x1'] + ' ' + status['y1'] + ' ' + status['x2'] + ' ' + status['y2']);
         } else if(status['andor2'] == '1'){
             temperaturestatus = {20034:'Off', 20035:'Not Stabilized', 20036:'Stabilized', 20037:'Cooling'};
             shutterstatus = {0:'Auto', 1:'Open', 2:'Closed'};

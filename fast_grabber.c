@@ -187,8 +187,8 @@ void process_grabber_command(grabber_str *grabber, char *string)
             AT_SetEnumIndex(grabber->handle, L"ElectronicShutteringMode", shutter);
         if(preamp >= 0){
             AT_SetEnumIndex(grabber->handle, L"SimplePreAmpGainControl", preamp);
-            if(preamp < 2)
-                AT_SetEnumString(grabber->handle, L"PixelEncoding", L"Mono12");
+            /* if(preamp < 2) */
+            /*     AT_SetEnumString(grabber->handle, L"PixelEncoding", L"Mono12"); */
         }
         if(filter >= 0)
             AT_SetBool(grabber->handle, L"SpuriousNoiseFilter", filter);

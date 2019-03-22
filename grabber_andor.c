@@ -16,6 +16,13 @@
 
 int counter;
 
+int callback_fn(AT_H handle, const AT_WC *feature, void *data)
+{
+    dprintf("callback for: %ls\n", feature);
+
+    return AT_CALLBACK_SUCCESS;
+}
+
 grabber_str *grabber_create()
 {
     grabber_str *grabber = NULL;
@@ -60,7 +67,8 @@ grabber_str *grabber_create()
     AT_SetEnumIndex(grabber->handle, L"AOIBinning", 0);
     AT_SetEnumIndex(grabber->handle, L"SimplePreAmpGainControl", 1);
     AT_SetFloat(grabber->handle, L"ExposureTime", 0.1);
-    AT_SetFloat(grabber->handle, L"TargetSensorTemperature", -20.0);
+    AT_SetFloat(grabber->handle, L"TargetSensorTemperature", -30.0);
+    AT_SetEnumIndex(grabber->handle, L"FanSpeed", 2);
 
     /* Reset the internal clocks */
     grabber->time0 = time_current();
@@ -70,6 +78,10 @@ grabber_str *grabber_create()
 
     counter = 0;
     grabber->temperature_time = time_zero();
+
+    /* AT_SetEnumString(grabber->handle, L"EventSelector", L"BufferOverflowEvent"); */
+    /* AT_SetBool(grabber->handle, L"EventEnable", 0); */
+    /* AT_RegisterFeatureCallback(grabber->handle, L"BufferOverflowEvent", callback_fn, NULL); */
 
     return grabber;
 }
@@ -253,11 +265,30 @@ AT_WC *get_enum_string(AT_H handle, const wchar_t *name)
     return buffer;
 }
 
+AT_WC *get_enum_string_by_index(AT_H handle, const wchar_t *name, int ival)
+{
+    static AT_WC buffer[128];
+    int i = 0;
+
+    buffer[0] = L'\0';
+
+    AT_IsImplemented(handle, name, &i);
+
+    if(i){
+        AT_GetEnumStringByIndex(handle, name, ival, buffer, 128);
+    } else {
+        dprintf("Error: %ls not implemented!\n", name);
+    }
+
+    return buffer;
+}
+
 void grabber_info(grabber_str *grabber)
 {
     if(!is_implemented(grabber->handle, L"CameraModel"))
         exit(1);
 
+    dprintf("Name: %ls\n", get_string(grabber->handle, L"CameraName"));
     dprintf("Model: %ls\n", get_string(grabber->handle, L"CameraModel"));
     dprintf("SN: %ls\n", get_string(grabber->handle, L"SerialNumber"));
 
@@ -320,6 +351,8 @@ void grabber_info(grabber_str *grabber)
 
     dprintf("Fan Speed: %ls\n", get_enum_string(grabber->handle, L"FanSpeed"));
 
+    /* dprintf("Shutter Mode: %ls\n", get_enum_string(grabber->handle, L"ShutterMode")); */
+
     if(!get_int(grabber->handle, L"SensorWidth"))
         exit(1);
 }
@@ -350,7 +383,7 @@ void grabber_acquisition_start(grabber_str *grabber)
 {
     int d;
 
-    for(d = 0; d < 10; d++)
+    for(d = 0; d < 100; d++)
         grabber_add_buffer(grabber);
 
     dprintf("acquisition_start\n");
@@ -393,8 +426,7 @@ image_str *grabber_wait_image(grabber_str *grabber, double delay)
         i = AT_WaitBuffer(grabber->handle, &buf, &size, 1000*delay);
         if(i == AT_ERR_NODATA){
             dprintf("AT_ERR_NODATA, resetting the acquisition\n");
-        } else if(i
-                  != AT_SUCCESS && i != AT_ERR_TIMEDOUT)
+        } else if(i != AT_SUCCESS && i != AT_ERR_TIMEDOUT)
             dprintf("i=%d\n", i);
 
     } while(i != AT_SUCCESS && i != AT_ERR_TIMEDOUT);
@@ -428,6 +460,10 @@ image_str *grabber_wait_image(grabber_str *grabber, double delay)
 
     image->time = time_current();
 
+    image_keyword_add(image, "CAMERA", w2c(get_string(grabber->handle, L"CameraModel")), "Camera Model");
+    image_keyword_add(image, "SERIAL", w2c(get_string(grabber->handle, L"SerialNumber")), "Camera Serial Number");
+    image_keyword_add(image, "FIRMWARE", w2c(get_string(grabber->handle, L"FirmwareVersion")), "Camera Firmware Version");
+
     image_keyword_add_double(image, "EXPOSURE", get_float(grabber->handle, L"ExposureTime"), NULL);
     image_keyword_add_double(image, "FRAMERATE", get_float(grabber->handle, L"FrameRate"), NULL);
     image_keyword_add_int(image, "SHUTTER", get_enum_index(grabber->handle, L"ElectronicShutteringMode"), w2c(get_enum_string(grabber->handle, L"ElectronicShutteringMode")));
@@ -436,14 +472,10 @@ image_str *grabber_wait_image(grabber_str *grabber, double delay)
     image_keyword_add_int(image, "READOUTRATE", get_enum_index(grabber->handle, L"PixelReadoutRate"), w2c(get_enum_string(grabber->handle, L"PixelReadoutRate")));
     image_keyword_add_double(image, "READOUTTIME", get_float(grabber->handle, L"ReadoutTime"), "Actual Readout Time");
 
-    if(time_interval(grabber->temperature_time, time_current()) > 1e3){
-        grabber->temperature_time = time_current();
-        grabber->temperaturestatus = get_enum_index(grabber->handle, L"TemperatureStatus");
-        grabber->temperature = get_float(grabber->handle, L"SensorTemperature");
+    grabber_update(grabber);
 
-        image_keyword_add_double(image, "TEMPERATURE", get_float(grabber->handle, L"SensorTemperature"), "Sensor Temperature");
-        image_keyword_add_int(image, "TEMPERATURESTATUS", get_enum_index(grabber->handle, L"TemperatureStatus"), w2c(get_enum_string(grabber->handle, L"TemperatureStatus")));
-    }
+    image_keyword_add_double(image, "TEMPERATURE", grabber->temperature, "Sensor Temperature");
+    image_keyword_add_int(image, "TEMPERATURESTATUS", grabber->temperaturestatus, w2c(get_enum_string_by_index(grabber->handle, L"TemperatureStatus", grabber->temperaturestatus)));
 
     image_keyword_add_int(image, "PIXELENCODING", get_enum_index(grabber->handle, L"PixelEncoding"), w2c(get_enum_string(grabber->handle, L"PixelEncoding")));
     image_keyword_add_int(image, "READOUTRATE", get_enum_index(grabber->handle, L"PixelReadoutRate"), w2c(get_enum_string(grabber->handle, L"PixelReadoutRate")));
@@ -453,6 +485,9 @@ image_str *grabber_wait_image(grabber_str *grabber, double delay)
     image_keyword_add_int(image, "NOISEFILTER", get_bool(grabber->handle, L"SpuriousNoiseFilter"), "Spurious Noise Filter");
     if(is_implemented(grabber->handle, L"Baseline"))
         image_keyword_add_int(image, "BASELINE", get_int(grabber->handle, L"Baseline"), "Current Baseline Level");
+
+    image_keyword_add_int(image, "FANSPEED", get_enum_index(grabber->handle, L"FanSpeed"), w2c(get_enum_string(grabber->handle, L"FanSpeed")));
+    image_keyword_add_int(image, "GAINMODE", get_enum_index(grabber->handle, L"GainMode"), w2c(get_enum_string(grabber->handle, L"GainMode")));
 
     if(get_bool(grabber->handle, L"MetadataEnable")){
         AT_64 clock = 0;
@@ -472,8 +507,6 @@ image_str *grabber_wait_image(grabber_str *grabber, double delay)
     free(buf);
 #endif
 
-    grabber_update(grabber);
-
     dprintf("Got frame %d at %s: %s\n", counter, timestamp(), time_str_get_date_time(image->time));
     counter ++;
 
@@ -487,7 +520,8 @@ image_str *grabber_get_image(grabber_str *grabber)
 
 void grabber_update(grabber_str *grabber)
 {
-    if(time_interval(grabber->temperature_time, time_current()) > 1e3){
+    if(time_interval(grabber->temperature_time, time_current()) > 5e3){
+        dprintf("update temperature\n");
         grabber->temperature_time = time_current();
         grabber->temperaturestatus = get_enum_index(grabber->handle, L"TemperatureStatus");
         grabber->temperature = get_float(grabber->handle, L"SensorTemperature");
@@ -500,4 +534,5 @@ void grabber_update(grabber_str *grabber)
     grabber->cooling = get_bool(grabber->handle, L"SensorCooling");
 
     grabber->shutter = get_enum_index(grabber->handle, L"ElectronicShutteringMode");
+    grabber->preamp = get_enum_index(grabber->handle, L"SimplePreAmpGainControl");
 }
