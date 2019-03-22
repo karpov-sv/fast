@@ -47,6 +47,8 @@ void prepare_storage(storage_str *storage, char *object)
 
     dprintf("Will write files to %s\n", storage->current);
 
+    storage->nframes = 0;
+
     free(objdir);
     free(datedir);
 }
