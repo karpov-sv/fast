@@ -96,6 +96,7 @@ void image_dump_to_jpeg(image_str *, char *);
 void image_convert_to_jpeg(image_str *, unsigned char **, int *);
 void image_jpeg_set_colormap(int );
 void image_jpeg_set_scale(int );
+void image_jpeg_set_quality(int );
 void image_jpeg_set_percentile(double, double );
 
 /* FITS-related stuff */

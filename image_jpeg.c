@@ -11,6 +11,7 @@
 
 static int jpeg_colormap = 0;
 static int jpeg_scale = 4;
+static int jpeg_quality = 95;
 static double jpeg_minp = 0.03;
 static double jpeg_maxp = 0.95;
 
@@ -22,6 +23,11 @@ void image_jpeg_set_colormap(int cmap)
 void image_jpeg_set_scale(int scale)
 {
     jpeg_scale = scale;
+}
+
+void image_jpeg_set_quality(int quality)
+{
+    jpeg_quality = quality;
 }
 
 void image_jpeg_set_percentile(double pmin, double pmax)
@@ -78,7 +84,7 @@ void image_jpeg_worker(image_str *image, char *filename, unsigned char **buffer_
     FILE *fd = NULL;
     struct jpeg_compress_struct cinfo;
     struct jpeg_error_mgr jerr;
-    int i, quality = 95, smoothness = 0, index = 0;
+    int i, quality = jpeg_quality, smoothness = 0, index = 0;
     int scale = jpeg_scale; /* FIXME: make adjustable */
     double min_p = jpeg_minp;
     double max_p = jpeg_maxp;

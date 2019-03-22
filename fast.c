@@ -369,11 +369,11 @@ char *get_status_string(fast_str *fast)
 
 #ifdef ANDOR
         add_to_string(&status, " andor=1 exposure=%g fps=%g"
-                      " binning=%ls shutter=%d"
+                      " binning=%d shutter=%d preamp=%d"
                       " cooling=%d"
                       " temperature=%g temperaturestatus=%d",
                       fast->grabber->exposure, fast->grabber->fps,
-                      fast->grabber->binning, fast->grabber->shutter,
+                      fast->grabber->binning, fast->grabber->shutter, fast->grabber->preamp,
                       fast->grabber->cooling, fast->grabber->temperature, fast->grabber->temperaturestatus);
 #elif ANDOR2
     add_to_string(&status, " andor2=1 exposure=%g fps=%g amplification=%d binning=%d"
@@ -550,6 +550,7 @@ void process_command(server_str *server, connection_str *connection, char *strin
     } else if(command_match(command, "jpeg_params")){
         double min = 0.05;
         double max = 0.995;
+        int quality = -1;
         int scale = 0;
         int cmap = -1;
 
@@ -558,6 +559,7 @@ void process_command(server_str *server, connection_str *connection, char *strin
                      "max=%lf", &max,
                      "scale=%d", &scale,
                      "cmap=%d", &cmap,
+                     "quality=%d", &quality,
                      NULL);
 
         image_jpeg_set_percentile(min, max);
@@ -565,6 +567,8 @@ void process_command(server_str *server, connection_str *connection, char *strin
             image_jpeg_set_scale(scale);
         if(cmap >= 0)
             image_jpeg_set_colormap(cmap);
+        if(quality >= 0)
+            image_jpeg_set_quality(quality);
     } else if(command_match(command, "set_keyword") || command_match(command, "set_keywords")){
         int i;
 
@@ -818,6 +822,7 @@ int main(int argc, char **argv)
     image_jpeg_set_percentile(0.05, 0.995);
     image_jpeg_set_scale(1);
     image_jpeg_set_colormap(1);
+    image_jpeg_set_quality(10);
 
     fast->is_quit = FALSE;
 
