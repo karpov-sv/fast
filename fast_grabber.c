@@ -155,6 +155,8 @@ void process_grabber_command(grabber_str *grabber, char *string)
         int overlap = -1;
         int cooling = -1;
         int rate = -1;
+        int glow = -1;
+        int blemish = -1;
         double temperature = -100.0;
         double fps = -1;
         int should_restart = FALSE;
@@ -170,6 +172,8 @@ void process_grabber_command(grabber_str *grabber, char *string)
                      "rate=%d", &rate,
                      "temperature=%lf", &temperature,
                      "fps=%lf", &fps,
+                     "glow=%d", &glow,
+                     "blemish=%d", &blemish,
                    NULL);
 
         if(grabber_is_acquiring(grabber)){
@@ -200,6 +204,11 @@ void process_grabber_command(grabber_str *grabber, char *string)
             AT_SetFloat(grabber->handle, L"TargetSensorTemperature", temperature);
         if(fps > 0.0)
             AT_SetFloat(grabber->handle, L"FrameRate", fps);
+
+        if(glow >= 0)
+            AT_SetBool(grabber->handle, L"GlowCompensation", glow);
+        if(blemish >= 0)
+            AT_SetBool(grabber->handle, L"StaticBlemishCorrection", blemish);
 
         if(should_restart){
             grabber_acquisition_start(grabber);

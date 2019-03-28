@@ -69,6 +69,8 @@ grabber_str *grabber_create()
     AT_SetFloat(grabber->handle, L"ExposureTime", 0.1);
     AT_SetFloat(grabber->handle, L"TargetSensorTemperature", -30.0);
     AT_SetEnumIndex(grabber->handle, L"FanSpeed", 2);
+    AT_SetBool(grabber->handle, L"GlowCompensation", 1);
+    AT_SetBool(grabber->handle, L"StaticBlemishCorrection", 1);
 
     /* Reset the internal clocks */
     grabber->time0 = time_current();
@@ -351,6 +353,8 @@ void grabber_info(grabber_str *grabber)
 
     dprintf("Fan Speed: %ls\n", get_enum_string(grabber->handle, L"FanSpeed"));
 
+    dprintf("GlowCompensation: %d\n", get_bool(grabber->handle, L"GlowCompensation"));
+
     /* dprintf("Shutter Mode: %ls\n", get_enum_string(grabber->handle, L"ShutterMode")); */
 
     if(!get_int(grabber->handle, L"SensorWidth"))
@@ -483,6 +487,8 @@ image_str *grabber_wait_image(grabber_str *grabber, double delay)
         image_keyword_add_int(image, "PREAMP", get_enum_index(grabber->handle, L"PreAmpGainControl"), w2c(get_enum_string(grabber->handle, L"PreAmpGainControl")));
     image_keyword_add_int(image, "SIMPLEPREAMP", get_enum_index(grabber->handle, L"SimplePreAmpGainControl"), w2c(get_enum_string(grabber->handle, L"SimplePreAmpGainControl")));
     image_keyword_add_int(image, "NOISEFILTER", get_bool(grabber->handle, L"SpuriousNoiseFilter"), "Spurious Noise Filter");
+    image_keyword_add_int(image, "GLOWCOMPENSATION", get_bool(grabber->handle, L"GlowCompensation"), "Glow Compensation");
+    image_keyword_add_int(image, "BLEMISHCORRECTION", get_bool(grabber->handle, L"StaticBlemishCorrection"), "Statis Blemish Correction");
     if(is_implemented(grabber->handle, L"Baseline"))
         image_keyword_add_int(image, "BASELINE", get_int(grabber->handle, L"Baseline"), "Current Baseline Level");
 
