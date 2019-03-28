@@ -65,6 +65,8 @@ fast_str *fast_create()
     fast->region_x2 = 0;
     fast->region_y2 = 0;
 
+    fast->zoom = 0;
+
     fast->countdown = -1;
 
     fast->is_acquisition = FALSE;
@@ -354,7 +356,7 @@ char *get_status_string(fast_str *fast)
 #else
                                " free_disk_space=%lld"
 #endif
-                               " region_x1=%d region_y1=%d region_x2=%d region_y2=%d"
+                               " region_x1=%d region_y1=%d region_x2=%d region_y2=%d zoom=%d"
                                " flux=%g mean=%g"
                                " num_acquired=%d num_stored=%d",
                                fast->is_acquisition, fast->is_storage, fast->object,
@@ -363,7 +365,7 @@ char *get_status_string(fast_str *fast)
                                fast->countdown, fast->postprocess, fast->dark ? TRUE : FALSE,
                                fast->running_time,
                                (long long int)free_disk_space(fast->base),
-                               fast->region_x1, fast->region_y1, fast->region_x2, fast->region_y2,
+                               fast->region_x1, fast->region_y1, fast->region_x2, fast->region_y2, fast->zoom,
                                fast->flux, fast->mean,
                                fast->total_length, fast->stored_length);
 
@@ -493,7 +495,15 @@ void process_command(server_str *server, connection_str *connection, char *strin
             mean = image_mean(image);
 
             image_jpeg_set_scale(1);
-            image_convert_to_jpeg(image, (unsigned char **)&data, &length);
+            if(fast->zoom){
+                image_str *crop = image_crop(image, 0.35*image->width, 0.35*image->height, 0.65*image->width, 0.65*image->height);
+
+                image_convert_to_jpeg(crop, (unsigned char **)&data, &length);
+
+                image_delete(crop);
+            } else
+                image_convert_to_jpeg(image, (unsigned char **)&data, &length);
+
             if(length){
                 server_connection_message(connection, "current_frame length=%d format=jpeg mean=%g", length, mean);
                 server_connection_write_block(connection, data, length);
@@ -569,6 +579,11 @@ void process_command(server_str *server, connection_str *connection, char *strin
             image_jpeg_set_colormap(cmap);
         if(quality >= 0)
             image_jpeg_set_quality(quality);
+    } else if(command_match(command, "set_zoom")){
+        command_args(command,
+                     "zoom=%d", &fast->zoom,
+                     NULL);
+
     } else if(command_match(command, "set_keyword") || command_match(command, "set_keywords")){
         int i;
 

@@ -57,6 +57,8 @@ typedef struct {
     int region_x2;
     int region_y2;
 
+    int zoom;
+
     /* Grabber */
     grabber_str *grabber;
 
