@@ -337,7 +337,7 @@ void process_image(fast_str *fast, image_str *image)
 
 void reset_images(fast_str *fast)
 {
-    image_delete_and_null(fast->image);
+    /* image_delete_and_null(fast->image); */
     image_delete_and_null(fast->image_total);
     image_delete_and_null(fast->running);
     image_delete_and_null(fast->running_accum);
