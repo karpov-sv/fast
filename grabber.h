@@ -191,6 +191,38 @@ int grabber_is_acquiring(grabber_str *);
 
 #endif /* CSDU */
 
+#ifdef QHY
+
+typedef struct {
+    void *handle;
+
+    unsigned char *buffer;
+    int bufsize;
+
+    double exposure;
+    double fps;
+    int gain;
+    int offset;
+    int binning;
+
+    double temperature;
+    double temppower;
+
+    u_int32_t max_width;
+    u_int32_t max_height;
+
+    int is_acquiring;
+} grabber_str;
+
+void grabber_set_exposure(grabber_str *, double );
+void grabber_set_gain(grabber_str *, int );
+void grabber_set_offset(grabber_str *, int );
+void grabber_set_binning(grabber_str *, int );
+void grabber_set_temperature(grabber_str *, double );
+int grabber_is_acquiring(grabber_str *);
+
+#endif /* QHY */
+
 #ifdef FAKE
 
 typedef struct {

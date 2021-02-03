@@ -5,6 +5,8 @@
 
 #include <glib.h>
 
+#include "image.h"
+#include "time_str.h"
 #include "utils.h"
 
 #include "command.h"
@@ -58,6 +60,15 @@ fast_str *fast_create()
     fast->time_last_stored = time_zero();
     fast->time_last_total_stored = time_zero();
 
+    fast->current_frame_data = NULL;
+    fast->current_frame_length = 0;
+
+    fast->total_frame_data = NULL;
+    fast->total_frame_length = 0;
+
+    fast->running_frame_data = NULL;
+    fast->running_frame_length = 0;
+
     fast->postprocess = 1;
 
     fast->region_x1 = 0;
@@ -90,6 +101,10 @@ void fast_delete(fast_str *fast)
 
     if(fast->grabber)
         grabber_delete(fast->grabber);
+
+    free_and_null(fast->current_frame_data);
+    free_and_null(fast->total_frame_data);
+    free_and_null(fast->running_frame_data);
 
     free(fast);
 }
@@ -244,6 +259,9 @@ void annotate_image(fast_str *fast, image_str *image)
 
 void process_image(fast_str *fast, image_str *image)
 {
+    time_str time0 = time_current();
+
+    /* printf("process_image start\n"); */
     annotate_image(fast, image);
 
     if(fast->image)
@@ -256,10 +274,14 @@ void process_image(fast_str *fast, image_str *image)
 
         fast->flux = get_flux(fast, image, 1, &fast->mean);
 
+        image_keyword_add_double(image, "MEAN", fast->mean, "mean value");
+
         /* Simple photometry (whole frame or ROI) */
         foreach(conn, fast->server->connections)
             if(conn->is_connected && fast->is_broadcast_flux)
                 server_connection_message(conn, "current_flux time=%g flux=%g mean=%g", t, fast->flux, fast->mean);
+
+        /* printf("process_image get_flux in %g s\n", 1e-3*time_interval(time0, time_current())); */
 
         fast->time_last_acquired = image->time;
 
@@ -290,6 +312,8 @@ void process_image(fast_str *fast, image_str *image)
         /* Append the frame to cumulative one */
         image_add(fast->image_total, fast->image);
 
+        /* printf("process_image add_total in %g s\n", 1e-3*time_interval(time0, time_current())); */
+
         fast->total_length ++;
         fast->total_exposure += image_keyword_get_double(fast->image, "EXPOSURE");
 
@@ -308,6 +332,8 @@ void process_image(fast_str *fast, image_str *image)
 
         image_add(fast->running_accum, fast->image);
         fast->running_accum_length ++;
+
+        /* printf("process_image add_running in %g s\n", 1e-3*time_interval(time0, time_current())); */
 
         if(fast->running_accum &&
            1e-3*time_interval(fast->running_accum->time, fast->image->time) + image_keyword_get_double(fast->running_accum, "EXPOSURE") > fast->running_time){
@@ -335,6 +361,18 @@ void process_image(fast_str *fast, image_str *image)
             fast->time_last_total_stored = image->time;
         }
     }
+
+    /* Reset stored JPEGs */
+    free_and_null(fast->current_frame_data);
+    fast->current_frame_length = 0;
+
+    free_and_null(fast->total_frame_data);
+    fast->total_frame_length = 0;
+
+    free_and_null(fast->running_frame_data);
+    fast->running_frame_length = 0;
+
+    /* printf("process_image end in %g s\n", 1e-3*time_interval(time0, time_current())); */
 }
 
 void reset_images(fast_str *fast)
@@ -403,6 +441,12 @@ char *get_status_string(fast_str *fast)
     add_to_string(&status, " csdu=1 exposure=%g fps=%g amplification=%d binning=%d",
                   fast->grabber->exposure, fast->grabber->fps,
                   fast->grabber->amplification, fast->grabber->binning);
+#elif QHY
+    add_to_string(&status, " qhy=1 exposure=%g fps=%g gain=%d offset=%d binning=%d"
+                  " temperature=%g temppower=%g",
+                  fast->grabber->exposure, fast->grabber->fps,
+                  fast->grabber->gain, fast->grabber->offset, fast->grabber->binning,
+                  fast->grabber->temperature, fast->grabber->temppower);
 #elif FAKE
     add_to_string(&status, " fake=1 exposure=%g fps=%g amplification=%d binning=%d",
                   fast->grabber->exposure, fast->grabber->fps,
@@ -472,7 +516,7 @@ void process_command(server_str *server, connection_str *connection, char *strin
                      "y2=%d", &fast->region_y2,
                      NULL);
         server_connection_message(connection, "%s_done", command_name(command));
-    } else if(command_match(command, "set_grabber")){
+    } else if(command_match(command, "set_grabber") || command_match(command, "set_window")){
         /* We will send the command to grabber thread verbatim */
         queue_add_with_destructor(fast->grabber_queue, FAST_MSG_COMMAND, make_string(string), free);
         server_connection_message(connection, "%s_done", command_name(command)); /* FIXME: wait for actual completion of command */
@@ -486,76 +530,75 @@ void process_command(server_str *server, connection_str *connection, char *strin
         if(!fast->image || !fast->is_acquisition){
             server_connection_message(connection, "current_frame_timeout");
         } else {
-            char *data = NULL;
-            int length = 0;
-            image_str *image = image_convert_to_double(fast->image);
-            double mean = 0;
+            /* printf("get_current_frame start\n"); */
 
-            postprocess_image(fast, image, 1);
-            mean = image_mean(image);
+            if(!fast->current_frame_data){
+                image_str *image = image_convert_to_double(fast->image);
 
-            image_jpeg_set_scale(1);
-            if(fast->zoom){
-                image_str *crop = image_crop(image, 0.35*image->width, 0.35*image->height, 0.65*image->width, 0.65*image->height);
+                postprocess_image(fast, image, 1);
 
-                image_convert_to_jpeg(crop, (unsigned char **)&data, &length);
+                /* image_jpeg_set_scale(1); */
+                if(fast->zoom){
+                    image_str *crop = image_crop(image, 0.35*image->width, 0.35*image->height, 0.65*image->width, 0.65*image->height);
 
-                image_delete(crop);
-            } else
-                image_convert_to_jpeg(image, (unsigned char **)&data, &length);
+                    image_convert_to_jpeg(crop, (unsigned char **)&fast->current_frame_data, &fast->current_frame_length);
 
-            if(length){
-                server_connection_message(connection, "current_frame length=%d format=jpeg mean=%g", length, mean);
-                server_connection_write_block(connection, data, length);
-                server_connection_message(connection, "current_frame_done");
-                free(data);
+                    image_delete(crop);
+                } else
+                    image_convert_to_jpeg(image, (unsigned char **)&fast->current_frame_data, &fast->current_frame_length);
+
+                image_delete(image);
             }
 
-            image_delete(image);
+            if(fast->current_frame_length){
+                server_connection_message(connection, "current_frame length=%d format=jpeg mean=%g", fast->current_frame_length, fast->mean);
+                server_connection_write_block(connection, fast->current_frame_data, fast->current_frame_length);
+                server_connection_message(connection, "current_frame_done");
+            }
+
+            /* printf("get_current_frame end\n"); */
         }
     } else if(command_match(command, "get_total_frame")){
         if(!fast->image_total || !fast->is_acquisition){
             server_connection_message(connection, "total_frame_timeout");
         } else {
-            image_str *image = image_copy(fast->image_total);
-            char *data = NULL;
-            int length = 0;
+            if (!fast->total_frame_data){
+                image_str *image = image_copy(fast->image_total);
 
-            postprocess_image(fast, image, fast->total_length);
+                postprocess_image(fast, image, fast->total_length);
 
-            image_jpeg_set_scale(1);
-            image_convert_to_jpeg(image, (unsigned char **)&data, &length);
-            if(length){
-                server_connection_message(connection, "total_frame length=%d format=jpeg", length);
-                server_connection_write_block(connection, data, length);
-                server_connection_message(connection, "total_frame_done");
-                free(data);
+                /* image_jpeg_set_scale(1); */
+                image_convert_to_jpeg(image, (unsigned char **)&fast->total_frame_data, &fast->total_frame_length);
+
+                image_delete(image);
             }
-
-            image_delete(image);
+            if(fast->total_frame_length){
+                server_connection_message(connection, "total_frame length=%d format=jpeg", fast->total_frame_length);
+                server_connection_write_block(connection, fast->total_frame_data, fast->total_frame_length);
+                server_connection_message(connection, "total_frame_done");
+            }
         }
     } else if(command_match(command, "get_running_frame")){
-        if(!fast->running || !fast->is_acquisition){
+        if(!fast->running || !fast->is_acquisition || TRUE){
             server_connection_message(connection, "running_frame_timeout");
         } else {
-            image_str *image = image_copy(fast->running);
-            char *data = NULL;
-            int length = 0;
+            if(!fast->running_frame_data){
+                image_str *image = image_copy(fast->running);
 
-            postprocess_image(fast, image, fast->running_length);
+                postprocess_image(fast, image, fast->running_length);
 
-            image_jpeg_set_scale(1);
-            image_convert_to_jpeg(image, (unsigned char **)&data, &length);
-            if(length){
-                server_connection_message(connection, "running_frame length=%d format=jpeg time=%g flux=%g",
-                                          length, 1e-3*time_interval(fast->time_start, fast->running->time),
-                                          image_sum(fast->running));
-                server_connection_write_block(connection, data, length);
-                server_connection_message(connection, "running_frame_done");
-                free(data);
+                /* image_jpeg_set_scale(1); */
+                image_convert_to_jpeg(image, (unsigned char **)&fast->running_frame_data, &fast->running_frame_length);
+
+                image_delete(image);
             }
-
-            image_delete(image);
+            if(fast->running_frame_length){
+                server_connection_message(connection, "running_frame length=%d format=jpeg time=%g flux=%g",
+                                          fast->running_frame_length, 1e-3*time_interval(fast->time_start, fast->running->time),
+                                          image_sum(fast->running));
+                server_connection_write_block(connection, fast->running_frame_data, fast->running_frame_length);
+                server_connection_message(connection, "running_frame_done");
+            }
         }
     } else if(command_match(command, "jpeg_params")){
         double min = 0.05;
@@ -579,6 +622,16 @@ void process_command(server_str *server, connection_str *connection, char *strin
             image_jpeg_set_colormap(cmap);
         if(quality >= 0)
             image_jpeg_set_quality(quality);
+
+        /* Reset stored JPEGs */
+        free_and_null(fast->current_frame_data);
+        fast->current_frame_length = 0;
+
+        free_and_null(fast->total_frame_data);
+        fast->total_frame_length = 0;
+
+        free_and_null(fast->running_frame_data);
+        fast->running_frame_length = 0;
     } else if(command_match(command, "set_zoom")){
         command_args(command,
                      "zoom=%d", &fast->zoom,
@@ -712,7 +765,7 @@ void process_web(server_str *server, connection_str *connection, char *string, v
                 char *data = NULL;
                 int length = 0;
 
-                image_jpeg_set_scale(1);
+                /* image_jpeg_set_scale(1); */
                 image_convert_to_jpeg(fast->image, (unsigned char **)&data, &length);
 
                 server_connection_message_nozero(connection,
@@ -811,7 +864,7 @@ int main(int argc, char **argv)
 
                NULL);
 
-    dprintf("base=%s\n", fast->base);
+    /* dprintf("base=%s\n", fast->base); */
 
     fast->grabber = grabber_create();
     grabber_info(fast->grabber);
@@ -835,9 +888,9 @@ int main(int argc, char **argv)
     pthread_create(&storage_thread, NULL, storage_worker, (void *)fast);
 
     image_jpeg_set_percentile(0.05, 0.995);
-    image_jpeg_set_scale(1);
+    image_jpeg_set_scale(8);
     image_jpeg_set_colormap(1);
-    image_jpeg_set_quality(10);
+    image_jpeg_set_quality(95);
 
     fast->is_quit = FALSE;
 

@@ -7,12 +7,12 @@
 #include "utils.h"
 #include "image.h"
 
-image_keyword_str *image_keyword_add(image_str *image, char *key, char *value, char *comment)
+image_keyword_str *image_keyword_add(image_str *image, const char *key, char *value, char *comment)
 {
     return image_keyword_add_type(image, key, value, comment, 0);
 }
 
-image_keyword_str *image_keyword_add_type(image_str *image, char *key, char *value, char *comment, char type)
+image_keyword_str *image_keyword_add_type(image_str *image, const char *key, char *value, char *comment, char type)
 {
     image_keyword_str *kw = image_keyword_find(image, key);
     int status = 0;
@@ -62,7 +62,7 @@ image_keyword_str *image_keyword_add_type(image_str *image, char *key, char *val
     return kw;
 }
 
-void image_keyword_add_int(image_str *image, char *key, int value, char *comment)
+void image_keyword_add_int(image_str *image, const char *key, int value, char *comment)
 {
     char *string = make_string("%d", value);
     image_keyword_add_type(image, key, string, comment, 'I'); /* Int */
@@ -70,7 +70,7 @@ void image_keyword_add_int(image_str *image, char *key, int value, char *comment
     free(string);
 }
 
-void image_keyword_add_int64(image_str *image, char *key, u_int64_t value, char *comment)
+void image_keyword_add_int64(image_str *image, const char *key, u_int64_t value, char *comment)
 {
     char *string = make_string("%lld", value);
     image_keyword_add_type(image, key, string, comment, 'I'); /* Int */
@@ -78,7 +78,7 @@ void image_keyword_add_int64(image_str *image, char *key, u_int64_t value, char 
     free(string);
 }
 
-void image_keyword_add_double(image_str *image, char *key, double value, char *comment)
+void image_keyword_add_double(image_str *image, const char *key, double value, char *comment)
 {
     char *string = make_string("%.12g", value);
     image_keyword_add_type(image, key, string, comment, 'F'); /* Float */
@@ -86,7 +86,7 @@ void image_keyword_add_double(image_str *image, char *key, double value, char *c
     free(string);
 }
 
-void image_keyword_add_time(image_str *image, char *key, time_str value, char *comment)
+void image_keyword_add_time(image_str *image, const char *key, time_str value, char *comment)
 {
     char *string = time_str_get_date_time(value);
 
@@ -95,7 +95,7 @@ void image_keyword_add_time(image_str *image, char *key, time_str value, char *c
     free(string);
 }
 
-image_keyword_str *image_keyword_find(image_str *image, char *key)
+image_keyword_str *image_keyword_find(image_str *image, const char *key)
 {
     image_keyword_str *kw = NULL;
     int d;
@@ -109,7 +109,7 @@ image_keyword_str *image_keyword_find(image_str *image, char *key)
     return kw;
 }
 
-char *image_keyword_get_string(image_str *image, char *key)
+char *image_keyword_get_string(image_str *image, const char *key)
 {
     char *value = NULL;
     image_keyword_str *kw = image_keyword_find(image, key);
@@ -120,48 +120,48 @@ char *image_keyword_get_string(image_str *image, char *key)
     return value;
 }
 
-int image_keyword_get_int(image_str *image, char *key)
+int image_keyword_get_int(image_str *image, const char *key)
 {
     image_keyword_str *kw = image_keyword_find(image, key);
     int value = 0;
 
     /* TODO: check keyword type?.. */
-    if(kw && kw->value)
+    if(kw)
         sscanf(kw->unquoted, "%d", &value);
 
     return value;
 }
 
-u_int64_t image_keyword_get_int64(image_str *image, char *key)
+u_int64_t image_keyword_get_int64(image_str *image, const char *key)
 {
     image_keyword_str *kw = image_keyword_find(image, key);
     long long int value = 0;
 
-    if(kw && kw->value)
+    if(kw)
         sscanf(kw->unquoted, "%lld", &value);
 
     return value;
 }
 
-double image_keyword_get_double(image_str *image, char *key)
+double image_keyword_get_double(image_str *image, const char *key)
 {
     image_keyword_str *kw = image_keyword_find(image, key);
     double value = 0;
 
-    if(kw && kw->value)
+    if(kw)
         sscanf(kw->unquoted, "%lf", &value);
 
     return value;
 }
 
-double image_keyword_get_sexagesimal(image_str *image, char *key)
+double image_keyword_get_sexagesimal(image_str *image, const char *key)
 {
     image_keyword_str *kw = image_keyword_find(image, key);
     double t1 = 0;
     double t2 = 0;
     double t3 = 0;
 
-    if(kw && kw->value)
+    if(kw)
         sscanf(kw->unquoted, "%lf %lf %lf", &t1, &t2, &t3);
 
     return t1 + sign(t1)*(t2*1./60 + t3*1./3600);

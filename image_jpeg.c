@@ -36,6 +36,18 @@ void image_jpeg_set_percentile(double pmin, double pmax)
     jpeg_maxp = MIN(1, pmax);
 }
 
+static int compare_fn_double(void *data, const void *v1, const void *v2) {
+    double res = ((double *)data)[*(int *)v1] - ((double *)data)[*(int *)v2];
+
+    return (res > 0 ? 1 : (res < 0 ? -1 : 0));
+}
+
+static int compare_fn_int(void *data, const void *v1, const void *v2) {
+    int res = ((int *)data)[*(int *)v1] - ((int *)data)[*(int *)v2];
+
+    return (res > 0 ? 1 : (res < 0 ? -1 : 0));
+}
+
 void image_percentile_norm(image_str *image, double min_p, double max_p, void *min_ptr, void *max_ptr)
 {
     int step = 100;
@@ -47,26 +59,12 @@ void image_percentile_norm(image_str *image, double min_p, double max_p, void *m
         idx[d] = d*step;
 
     if(image->type == IMAGE_DOUBLE){
-        int compare_fn(const void *v1, const void *v2)
-        {
-            double res = image->double_data[*(int *)v1] - image->double_data[*(int *)v2];
-
-            return (res > 0 ? 1 : (res < 0 ? -1 : 0));
-        }
-
-        qsort(idx, N/step, sizeof(int), compare_fn);
+        qsort_r(idx, N/step, sizeof(int), image->double_data, compare_fn_double);
 
         *((double *)min_ptr) = image->double_data[idx[(int)floor(min_p*(N/step - 1))]];
         *((double *)max_ptr) = image->double_data[idx[(int)floor(max_p*(N/step - 1))]];
     } else {
-        int compare_fn(const void *v1, const void *v2)
-        {
-            int res = image->data[*(int *)v1] - image->data[*(int *)v2];
-
-            return (res > 0 ? 1 : (res < 0 ? -1 : 0));
-        }
-
-        qsort(idx, N/step, sizeof(int), compare_fn);
+        qsort_r(idx, N/step, sizeof(int), image->data, compare_fn_int);
 
         *((int *)min_ptr) = image->data[idx[(int)floor(min_p*(N/step - 1))]];
         *((int *)max_ptr) = image->data[idx[(int)floor(max_p*(N/step - 1))]];

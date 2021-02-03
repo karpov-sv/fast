@@ -274,6 +274,31 @@ void process_grabber_command(grabber_str *grabber, char *string)
         if(should_restart){
             grabber_acquisition_start(grabber);
         }
+#elif QHY
+        double exposure = -1;
+        int gain = -1;
+        int offset = -1;
+        int binning = -1;
+        double temperature = -100;
+
+        command_args(command,
+                     "exposure=%lf", &exposure,
+                     "gain=%d", &gain,
+                     "offset=%d", &offset,
+                     "binning=%d", &binning,
+                     "temperature=%lf", &temperature,
+                     NULL);
+
+        if(exposure >= 0)
+            grabber_set_exposure(grabber, exposure);
+        if(gain >= 0)
+            grabber_set_gain(grabber, gain);
+        if(offset >= 0)
+            grabber_set_offset(grabber, offset);
+        if(binning >= 0 && binning < 4)
+            grabber_set_binning(grabber, binning);
+        if(temperature >= -50)
+            grabber_set_temperature(grabber, temperature);
 #endif
 
         grabber_info(grabber);

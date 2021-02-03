@@ -387,6 +387,12 @@ double image_sum(image_str *image)
     return sum;
 }
 
+static int compare_fn(void *data, const void *v1, const void *v2) {
+    int res = ((int*)data)[*(int *)v1] - ((int*)data)[*(int *)v2];
+
+    return (res > 0 ? 1 : (res < 0 ? -1 : 0));
+}
+
 double image_median(image_str *image)
 {
     int N = image->width*image->height;
@@ -400,14 +406,7 @@ double image_median(image_str *image)
     if(image->type == IMAGE_DOUBLE){
         value = get_median(image->double_data, image->width*image->height);
     } else {
-        int compare_fn(const void *v1, const void *v2)
-        {
-            int res = image->data[*(int *)v1] - image->data[*(int *)v2];
-
-            return (res > 0 ? 1 : (res < 0 ? -1 : 0));
-        }
-
-        qsort(idx, N, sizeof(int), compare_fn);
+        qsort_r(idx, N, sizeof(int), image->data, compare_fn);
         value = image->data[idx[(int)floor(N/2)]];
 
     }

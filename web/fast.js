@@ -142,6 +142,10 @@ Fast.prototype.makeControls = function(type){
         this.makeButton("99%", "jpeg_params 0.01 0.99").appendTo(tmp);
         this.makeButton("95%", "jpeg_params 0.05 0.95").appendTo(tmp);
         this.makeButton("90%", "jpeg_params 0.1 0.9").appendTo(tmp);
+        this.makeButton(":").appendTo(tmp);
+        this.makeButton("x1", "jpeg_params scale=1").appendTo(tmp);
+        this.makeButton("x2", "jpeg_params scale=2").appendTo(tmp);
+        this.makeButton("x4", "jpeg_params scale=4").appendTo(tmp);
 
         tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
         this.makeButton("Quality:").appendTo(tmp);
@@ -255,7 +259,7 @@ Fast.prototype.makeControls = function(type){
         this.makeButton("1/4", "set_grabber x1=385 y1=385 x2=640 y2=640").appendTo(tmp);
     }
 
-    if(type == "pvcam" || type == "andor" || type == "andor2"){
+    if(type == "pvcam" || type == "andor" || type == "andor2" || type == "qhy"){
         tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
         this.makeButton("Countdown:").appendTo(tmp);
         this.makeButton("None", "set_countdown 0").appendTo(tmp);
@@ -373,7 +377,7 @@ Fast.prototype.updateStatus = function(connected, status){
             this.connstatus.removeClass("label-danger").addClass("label-success");
         }
 
-        types = ["pvcam", "csdu", "vs2001", "vs56", "andor", "andor2"];
+        types = ["pvcam", "csdu", "vs2001", "vs56", "andor", "andor2", "qhy"];
         for(var i = 0; i < types.length; i++)
             if(status[types[i]] == '1' && this.controls_type != types[i])
                 this.makeControls(types[i]);
@@ -434,7 +438,7 @@ Fast.prototype.updateStatus = function(connected, status){
         this.state.html(state);
 
         state = "Exposure: " + label(status['exposure']);
-        if(status['pvcam'] == '1' || status['csdu'] == '1' || status['andor2'] == '1'){
+        if(status['pvcam'] == '1' || status['csdu'] == '1' || status['andor2'] == '1' || status['qhy'] == '1'){
             state += " FPS: ";
             if(status['acquisition'] == '1')
                 state += label((1.0*status['fps']).toPrecision(3));
@@ -499,6 +503,11 @@ Fast.prototype.updateStatus = function(connected, status){
                 label(status['x1'] + ' ' + status['y1'] + ' ' + status['x2'] + ' ' + status['y2']);
             state += " VS: " + label(status['vsspeed']);
             state += " HS: " + label(status['hsspeed']) + ' ' + label(status['speed']) + ' MHz';
+        } else if(status['qhy'] == '1'){
+            state += " Binning: " + label(status['binning']+"x"+status['binning']);
+            state += " Gain: " + label(status['gain']);
+            state += " Offset: " + label(status['offset']);
+            state += " Temperature: " + label(status['temperature']) + ' @ ' + label(status['temppower']/255);
         }
 
         if(status['vslib'] == '1' || status['csdu'] == '1' || status['andor2'] == '1'){

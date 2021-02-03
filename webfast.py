@@ -256,7 +256,7 @@ class WebFast(Resource):
         elif q.path == self.base + '/image.jpg':
             if self.fast.image:
                 request.responseHeaders.setRawHeaders("Content-Type", ['image/jpeg'])
-                request.responseHeaders.setRawHeaders("Content-Length", [len(self.fast.image)])
+                request.responseHeaders.setRawHeaders("Content-Length", [str(len(self.fast.image))])
                 return self.fast.image
             else:
                 request.setResponseCode(400)
@@ -264,7 +264,7 @@ class WebFast(Resource):
         elif q.path == self.base + '/total_image.jpg':
             if self.fast.total_image:
                 request.responseHeaders.setRawHeaders("Content-Type", ['image/jpeg'])
-                request.responseHeaders.setRawHeaders("Content-Length", [len(self.fast.total_image)])
+                request.responseHeaders.setRawHeaders("Content-Length", [str(len(self.fast.total_image))])
                 return self.fast.total_image
             else:
                 request.setResponseCode(400)
@@ -288,7 +288,7 @@ class WebFast(Resource):
             canvas.print_jpeg(s, bbox_inches='tight')
 
             request.responseHeaders.setRawHeaders("Content-Type", ['image/jpeg'])
-            request.responseHeaders.setRawHeaders("Content-Length", [s.len])
+            request.responseHeaders.setRawHeaders("Content-Length", [str(s.len)])
             request.responseHeaders.setRawHeaders("Cache-Control", ['no-store, no-cache, must-revalidate, max-age=0'])
             return s.getvalue()
 
@@ -300,7 +300,8 @@ class WebFast(Resource):
             ax.yaxis.set_major_formatter(ScalarFormatter(useOffset=False))
 
             x = np.array(self.fast.time)
-            x = x - x[0]
+            if len(x):
+                x = x - x[0]
             y = np.array(self.fast.mean)
 
             ax.plot(x[-1000:], y[-1000:], '-')
@@ -312,7 +313,7 @@ class WebFast(Resource):
             canvas.print_jpeg(s, bbox_inches='tight')
 
             request.responseHeaders.setRawHeaders("Content-Type", ['image/jpeg'])
-            request.responseHeaders.setRawHeaders("Content-Length", [s.len])
+            request.responseHeaders.setRawHeaders("Content-Length", [str(s.len)])
             request.responseHeaders.setRawHeaders("Cache-Control", ['no-store, no-cache, must-revalidate, max-age=0'])
             return s.getvalue()
 

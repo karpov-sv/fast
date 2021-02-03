@@ -48,6 +48,16 @@ typedef struct {
     time_str time_last_stored;
     time_str time_last_total_stored;
 
+    /* Prepared JPEG previews */
+    char *current_frame_data;
+    int current_frame_length;
+
+    char *total_frame_data;
+    int total_frame_length;
+
+    char *running_frame_data;
+    int running_frame_length;
+
     /* Post-processing */
     int postprocess;
 
