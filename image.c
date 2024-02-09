@@ -387,7 +387,11 @@ double image_sum(image_str *image)
     return sum;
 }
 
+#ifdef __linux__
+static int compare_fn(const void *v1, const void *v2, void *data) {
+#else /* OSX */
 static int compare_fn(void *data, const void *v1, const void *v2) {
+#endif
     int res = ((int*)data)[*(int *)v1] - ((int*)data)[*(int *)v2];
 
     return (res > 0 ? 1 : (res < 0 ? -1 : 0));
@@ -406,7 +410,11 @@ double image_median(image_str *image)
     if(image->type == IMAGE_DOUBLE){
         value = get_median(image->double_data, image->width*image->height);
     } else {
-        qsort_r(idx, N, sizeof(int), image->data, compare_fn);
+#ifdef __linux__
+        qsort_r(idx, N, sizeof(u_int16_t), compare_fn, image->data);
+#else /* OSX */
+        qsort_r(idx, N, sizeof(u_int16_t), image->data, compare_fn);
+#endif
         value = image->data[idx[(int)floor(N/2)]];
 
     }

@@ -57,7 +57,8 @@ image_str *image_create_with_data(int , int , u_int16_t *);
 void image_delete(image_str *);
 
 #define image_delete_and_null(image) do {\
-        if(image) image_delete(image); (image) = NULL;  \
+        if(image) image_delete(image); \
+        (image) = NULL;                \
     } while(0)
 
 void image_fill(image_str *, double );

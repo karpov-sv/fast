@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from twisted.internet.protocol import Protocol, ReconnectingClientFactory
 from twisted.internet.task import LoopingCall
@@ -6,7 +6,7 @@ from twisted.web.server import Site
 from twisted.web.resource import Resource
 from twisted.web.static import File
 
-from twistedauth import wrap_with_auth as Auth
+# from twistedauth import wrap_with_auth as Auth
 
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -15,13 +15,13 @@ from matplotlib.ticker import ScalarFormatter
 from matplotlib.patches import Ellipse
 
 import sys
-import urlparse
+from urllib.parse import urlparse, parse_qs
 import json
 import datetime
 import re
 
 from PIL import Image, ImageDraw
-from StringIO import StringIO
+from io import BytesIO, StringIO
 
 import matplotlib.cm as cm
 
@@ -45,7 +45,7 @@ class Favor2Protocol(Protocol):
     refresh = 1
 
     def connectionMade(self):
-        self.buffer = ''
+        self.buffer = b''
         self.is_binary = False
         self.binary_length = 0
 
@@ -58,8 +58,13 @@ class Favor2Protocol(Protocol):
 
     def message(self, string):
         #print ">>", string
-        self.transport.write(string)
-        self.transport.write("\0")
+
+        if type(string) == str:
+            self.transport.write(string.encode('ascii'))
+        else:
+            self.transport.write(string)
+
+        self.transport.write("\0".encode('ascii'))
 
     def dataReceived(self, data):
         self.buffer = self.buffer + data
@@ -77,17 +82,17 @@ class Favor2Protocol(Protocol):
             else:
                 try:
                     #token, self.buffer = self.buffer.split('\0', 1)
-                    token, self.buffer = re.split('\0|\n', self.buffer, 1)
+                    token, self.buffer = re.split(b'\0|\n', self.buffer, 1)
                     if token and len(token):
-                        self.processMessage(token)
+                        self.processMessage(token.decode('ascii'))
                 except ValueError:
                     break
 
     def processMessage(self, string):
-        print ">", string
+        print(">", string)
 
     def processBinary(self, data):
-        print "binary>", len(data), "bytes"
+        print("binary>", len(data), "bytes")
 
     def requestStatus(self):
         pass
@@ -191,7 +196,7 @@ class Favor2ClientFactory(ReconnectingClientFactory):
         self.clients = []
 
     def buildProtocol(self, addr):
-        print 'Connected to %s:%d' % (addr.host, addr.port)
+        print('Connected to %s:%d' % (addr.host, addr.port))
 
         p = self.protocolFactory()
         p.factory = self
@@ -199,7 +204,7 @@ class Favor2ClientFactory(ReconnectingClientFactory):
         return p
 
     def clientConnectionLost(self, connector, reason):
-        print 'Disconnected from %s:%d' % (connector.host, connector.port)
+        print('Disconnected from %s:%d' % (connector.host, connector.port))
         ReconnectingClientFactory.clientConnectionLost(self, connector, reason)
 
     def isConnected(self):
@@ -213,7 +218,7 @@ class Favor2ClientFactory(ReconnectingClientFactory):
 
 def serve_json(request, **kwargs):
     request.responseHeaders.setRawHeaders("Content-Type", ['application/json'])
-    return json.dumps(kwargs)
+    return json.dumps(kwargs).encode('ascii')
 
 class WebPhotometer(Resource):
     isLeaf = True
@@ -222,15 +227,15 @@ class WebPhotometer(Resource):
         self.photometer = photometer
 
     def render_GET(self, request):
-        q = urlparse.urlparse(request.uri)
-        args = urlparse.parse_qs(q.query)
+        q = urlparse(request.uri)
+        args = parse_qs(q.query)
 
         if q.path == '/photometer/status':
             return serve_json(request,
                               photometer_connected = self.photometer.factory.isConnected(),
                               photometer = self.photometer.photometer_status)
         elif q.path == '/photometer/command':
-            self.photometer.factory.message(args['string'][0])
+            self.photometer.factory.message(args[b'string'][0])
             return serve_json(request)
         else:
             return q.path
@@ -243,33 +248,34 @@ class WebFast(Resource):
         self.base = base
 
     def render_GET(self, request):
-        q = urlparse.urlparse(request.uri)
-        args = urlparse.parse_qs(q.query)
+        q = urlparse(request.uri)
+        args = parse_qs(q.query)
+        path = q.path.decode('ascii')
 
-        if q.path == self.base + '/status':
+        if path == self.base + '/status':
             return serve_json(request,
                               fast_connected = self.fast.factory.isConnected(),
                               fast = self.fast.fast_status)
-        elif q.path == self.base + '/command':
-            self.fast.factory.message(args['string'][0])
+        elif path == self.base + '/command':
+            self.fast.factory.message(args[b'string'][0])
             return serve_json(request)
-        elif q.path == self.base + '/image.jpg':
+        elif path == self.base + '/image.jpg':
             if self.fast.image:
                 request.responseHeaders.setRawHeaders("Content-Type", ['image/jpeg'])
                 request.responseHeaders.setRawHeaders("Content-Length", [str(len(self.fast.image))])
                 return self.fast.image
             else:
                 request.setResponseCode(400)
-                return "No images"
-        elif q.path == self.base + '/total_image.jpg':
+                return "No images".encode('ascii')
+        elif path == self.base + '/total_image.jpg':
             if self.fast.total_image:
                 request.responseHeaders.setRawHeaders("Content-Type", ['image/jpeg'])
                 request.responseHeaders.setRawHeaders("Content-Length", [str(len(self.fast.total_image))])
                 return self.fast.total_image
             else:
                 request.setResponseCode(400)
-                return "No images"
-        elif q.path == self.base + '/total_flux.jpg':
+                return "No images".encode('ascii')
+        elif path == self.base + '/total_flux.jpg':
             width = 800
             fig = Figure(facecolor='white', figsize=(width/72, width*0.5/72), tight_layout=True)
             ax = fig.add_subplot(111)
@@ -284,15 +290,15 @@ class WebFast(Resource):
             ax.set_ylabel('Flux, counts')
 
             canvas = FigureCanvas(fig)
-            s = StringIO()
-            canvas.print_jpeg(s, bbox_inches='tight')
+            s = BytesIO()
+            canvas.print_jpeg(s)
 
             request.responseHeaders.setRawHeaders("Content-Type", ['image/jpeg'])
-            request.responseHeaders.setRawHeaders("Content-Length", [str(s.len)])
+            request.responseHeaders.setRawHeaders("Content-Length", [str(len(s.getvalue()))])
             request.responseHeaders.setRawHeaders("Cache-Control", ['no-store, no-cache, must-revalidate, max-age=0'])
             return s.getvalue()
 
-        elif q.path == self.base + '/current_flux.jpg':
+        elif path == self.base + '/current_flux.jpg':
             width = 800
             fig = Figure(facecolor='white', figsize=(width/72, width*0.5/72), tight_layout=True)
             ax = fig.add_subplot(111)
@@ -309,16 +315,16 @@ class WebFast(Resource):
             ax.set_ylabel('Flux, counts')
 
             canvas = FigureCanvas(fig)
-            s = StringIO()
-            canvas.print_jpeg(s, bbox_inches='tight')
+            s = BytesIO()
+            canvas.print_jpeg(s)
 
             request.responseHeaders.setRawHeaders("Content-Type", ['image/jpeg'])
-            request.responseHeaders.setRawHeaders("Content-Length", [str(s.len)])
+            request.responseHeaders.setRawHeaders("Content-Length", [str(len(s.getvalue()))])
             request.responseHeaders.setRawHeaders("Cache-Control", ['no-store, no-cache, must-revalidate, max-age=0'])
             return s.getvalue()
 
         else:
-            return q.path
+            return path.encode('ascii')
 
 # Main
 if __name__ == '__main__':
@@ -326,7 +332,7 @@ if __name__ == '__main__':
 
     parser = OptionParser(usage="usage: %prog [options] ...")
     parser.add_option('-p', '--port', help='Daemon port', action='store', dest='port', type='int', default=5555)
-    parser.add_option('-H', '--http-port', help='HTTP server port', action='store', dest='http_port', type='int', default=8888)
+    parser.add_option('-H', '--http-port', help='HTTP server port', action='store', dest='http_port', type='int', default=5556)
 
     (options,args) = parser.parse_args()
 
@@ -340,12 +346,12 @@ if __name__ == '__main__':
     passwd = {'fast':'fast'}
 
     # Serve files from web
-    root = File("web")
+    root = File(b"web")
     # ...with some other paths handled also
-    root.putChild("", File('web/webfast.html'))
-    root.putChild("fast.html", File('web/webfast.html'))
+    root.putChild(b"", File('web/webfast.html'))
+    root.putChild(b"fast.html", File('web/webfast.html'))
 
-    root.putChild("fast", WebFast(fast, base='/fast'))
+    root.putChild(b"fast", WebFast(fast, base='/fast'))
 
     #site = Site(Auth(root, passwd))
     site = Site(root)

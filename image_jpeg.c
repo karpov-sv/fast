@@ -36,14 +36,22 @@ void image_jpeg_set_percentile(double pmin, double pmax)
     jpeg_maxp = MIN(1, pmax);
 }
 
+#ifdef __linux__
+static int compare_fn_double(const void *v1, const void *v2, void *data) {
+#else /* OSX */
 static int compare_fn_double(void *data, const void *v1, const void *v2) {
+#endif
     double res = ((double *)data)[*(int *)v1] - ((double *)data)[*(int *)v2];
 
     return (res > 0 ? 1 : (res < 0 ? -1 : 0));
 }
 
+#ifdef __linux__
+static int compare_fn_int(const void *v1, const void *v2, void *data) {
+#else /* OSX */
 static int compare_fn_int(void *data, const void *v1, const void *v2) {
-    int res = ((int *)data)[*(int *)v1] - ((int *)data)[*(int *)v2];
+#endif
+    int res = ((u_int16_t *)data)[*(int *)v1] - ((int *)data)[*(int *)v2];
 
     return (res > 0 ? 1 : (res < 0 ? -1 : 0));
 }
@@ -59,12 +67,20 @@ void image_percentile_norm(image_str *image, double min_p, double max_p, void *m
         idx[d] = d*step;
 
     if(image->type == IMAGE_DOUBLE){
+#ifdef __linux__
+        qsort_r(idx, N/step, sizeof(int), compare_fn_double, image->double_data);
+#else /* OSX */
         qsort_r(idx, N/step, sizeof(int), image->double_data, compare_fn_double);
+#endif
 
         *((double *)min_ptr) = image->double_data[idx[(int)floor(min_p*(N/step - 1))]];
         *((double *)max_ptr) = image->double_data[idx[(int)floor(max_p*(N/step - 1))]];
     } else {
+#ifdef __linux__
+        qsort_r(idx, N/step, sizeof(int), compare_fn_int, image->data);
+#else /* OSX */
         qsort_r(idx, N/step, sizeof(int), image->data, compare_fn_int);
+#endif
 
         *((int *)min_ptr) = image->data[idx[(int)floor(min_p*(N/step - 1))]];
         *((int *)max_ptr) = image->data[idx[(int)floor(max_p*(N/step - 1))]];
@@ -123,8 +139,8 @@ void image_jpeg_worker(image_str *image, char *filename, unsigned char **buffer_
 
         d = 0;
 
-        for(y = 0; y < image->height; y++)
-            for(x = 0; x < image->width; x++){
+        for(y = 0; y < new_height << shift; y++)
+            for(x = 0; x < new_width << shift; x++){
                 int value = 255.0*(image->double_data[d++] - min)/(max - min);
                 int new_x = x >> shift;
                 int new_y = y >> shift;
@@ -147,8 +163,8 @@ void image_jpeg_worker(image_str *image, char *filename, unsigned char **buffer_
 
         d = 0;
 
-        for(y = 0; y < image->height; y++)
-            for(x = 0; x < image->width; x++){
+        for(y = 0; y < new_height << shift; y++)
+            for(x = 0; x < new_width << shift; x++){
                 int value = 255*(image->data[d++] - min)/(max - min);
                 int new_x = x >> shift;
                 int new_y = y >> shift;

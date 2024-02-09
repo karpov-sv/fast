@@ -129,7 +129,8 @@ int system_run_silently(const char *, ...);
 
 /* free() the pointer and set its value to NULL */
 #define free_and_null(ptr) do {\
-        if(ptr) free(ptr); (ptr) = NULL;  \
+        if(ptr) free(ptr); \
+        (ptr) = NULL;      \
     } while(0)
 
 

@@ -272,6 +272,16 @@ void process_image(fast_str *fast, image_str *image)
         double t = 1e-3*time_interval(fast->time_start, image->time);
         connection_str *conn = NULL;
 
+        if(fast->region_x1 < 0 || fast->region_x1 >= image->width ||
+           fast->region_y1 <= 0 || fast->region_y1 >= image->height ||
+           fast->region_x2 < 0 || fast->region_x2 >= image->width ||
+           fast->region_y2 <= 0 || fast->region_y2 >= image->height){
+            fast->region_x1 = 0;
+            fast->region_y1 = 0;
+            fast->region_x2 = image->width - 1;
+            fast->region_y2 = image->height - 1;
+        }
+
         fast->flux = get_flux(fast, image, 1, &fast->mean);
 
         image_keyword_add_double(image, "MEAN", fast->mean, "mean value");
@@ -284,16 +294,6 @@ void process_image(fast_str *fast, image_str *image)
         /* printf("process_image get_flux in %g s\n", 1e-3*time_interval(time0, time_current())); */
 
         fast->time_last_acquired = image->time;
-
-        if(fast->region_x1 < 0 || fast->region_x1 >= image->width ||
-           fast->region_y1 <= 0 || fast->region_y1 >= image->height ||
-           fast->region_x2 < 0 || fast->region_x2 >= image->width ||
-           fast->region_y2 <= 0 || fast->region_y2 >= image->height){
-            fast->region_x1 = 0;
-            fast->region_y1 = 0;
-            fast->region_x2 = image->width - 1;
-            fast->region_y2 = image->height - 1;
-        }
 
         /* Reset the cumulative image if frame size has changed */
         if(fast->image_total && (fast->image_total->width != fast->image->width || fast->image_total->height != fast->image->height)){
@@ -447,6 +447,19 @@ char *get_status_string(fast_str *fast)
                   fast->grabber->exposure, fast->grabber->fps,
                   fast->grabber->gain, fast->grabber->offset, fast->grabber->binning,
                   fast->grabber->temperature, fast->grabber->temppower);
+#elif GXCCD
+    add_to_string(&status, " gxccd=1 exposure=%g fps=%g gain=%g"
+                  " temperature=%g target_temperature=%g temppower=%g"
+                  " max_width=%d max_height=%d x0=%d y0=%d width=%d height=%d"
+                  " binning=%d readmode=%d shutter=%d filter=%d"
+                  " preflash=%g readout=%g",
+                  fast->grabber->exposure, fast->grabber->fps, fast->grabber->gain,
+                  fast->grabber->temperature, fast->grabber->target_temperature, fast->grabber->temppower,
+                  fast->grabber->max_width, fast->grabber->max_height,
+                  fast->grabber->x0, fast->grabber->y0, fast->grabber->width, fast->grabber->height,
+                  fast->grabber->binning, fast->grabber->readmode,
+                  fast->grabber->shutter, fast->grabber->filter,
+                  fast->grabber->preflash_time, fast->grabber->readout_time);
 #elif FAKE
     add_to_string(&status, " fake=1 exposure=%g fps=%g amplification=%d binning=%d",
                   fast->grabber->exposure, fast->grabber->fps,
@@ -534,6 +547,8 @@ void process_command(server_str *server, connection_str *connection, char *strin
 
             if(!fast->current_frame_data){
                 image_str *image = image_convert_to_double(fast->image);
+
+                image_dump_to_fits(image, "image.fits");
 
                 postprocess_image(fast, image, 1);
 

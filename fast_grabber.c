@@ -299,6 +299,51 @@ void process_grabber_command(grabber_str *grabber, char *string)
             grabber_set_binning(grabber, binning);
         if(temperature >= -50)
             grabber_set_temperature(grabber, temperature);
+#elif GXCCD
+        double exposure = -1;
+        double temperature = -100;
+        int binning = -1;
+        int readmode = -1;
+        int filter = -1;
+        int shutter = -1;
+        double preflash = -1;
+
+        int x0 = 0;
+        int y0 = 0;
+        int width = -1;
+        int height = -1;
+
+        command_args(command,
+                     "exposure=%lf", &exposure,
+                     "binning=%d", &binning,
+                     "readmode=%d", &readmode,
+                     "filter=%d", &filter,
+                     "shutter=%d", &shutter,
+                     "preflash=%lf", &preflash,
+                     "temperature=%lf", &temperature,
+                     "x0=%d", &x0,
+                     "y0=%d", &y0,
+                     "width=%d", &width,
+                     "height=%d", &height,
+                     NULL);
+
+        if(exposure >= 0)
+            grabber_set_exposure(grabber, exposure);
+        if(readmode >= 0)
+            grabber_set_readmode(grabber, readmode);
+        if(shutter >= 0)
+            grabber_set_shutter(grabber, shutter);
+        if(filter >= 0)
+            grabber_set_filter(grabber, filter);
+        if(binning >= 0)
+            grabber_set_binning(grabber, binning);
+        if(temperature >= -90)
+            grabber_set_temperature(grabber, temperature);
+        if(preflash >= 0)
+            grabber_set_preflash(grabber, preflash);
+
+        if(width >= 0 || height >= 0)
+            grabber_set_window(grabber, x0, y0, width, height);
 #endif
 
         grabber_info(grabber);
@@ -322,7 +367,7 @@ void *grabber_worker(void *data)
     grabber_acquisition_stop(fast->grabber);
 #endif
 
-    dprintf("Grabber subsystem started\n");
+    dprintf("%s Grabber subsystem started\n", timestamp());
 
     while(!is_quit){
         queue_message_str m = queue_get(fast->grabber_queue);
@@ -358,7 +403,7 @@ void *grabber_worker(void *data)
 
         switch(m.event){
         case FAST_MSG_START:
-            dprintf("Starting Grabber acquisition\n");
+            dprintf("%s Starting Grabber acquisition\n", timestamp());
             fast->time_start = time_current();
             fast->is_acquisition = TRUE;
             //is_first = TRUE;
@@ -366,7 +411,7 @@ void *grabber_worker(void *data)
             break;
 
         case FAST_MSG_STOP:
-            dprintf("Stopping Grabber acquisition\n");
+            dprintf("%s Stopping Grabber acquisition\n", timestamp());
             grabber_acquisition_stop(fast->grabber);
             fast->is_acquisition = FALSE;
             queue_add(fast->server_queue, FAST_MSG_ACQUISITION_STOPPED, NULL);
@@ -392,7 +437,7 @@ void *grabber_worker(void *data)
 
     grabber_acquisition_stop(fast->grabber);
 
-    dprintf("Grabber subsystem finished\n");
+    dprintf("%s Grabber subsystem finished\n", timestamp());
 
     return NULL;
 }

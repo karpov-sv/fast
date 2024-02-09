@@ -223,6 +223,50 @@ int grabber_is_acquiring(grabber_str *);
 
 #endif /* QHY */
 
+#ifdef GXCCD
+
+#include <gxccd.h>
+
+typedef struct {
+    camera_t *camera;
+
+    double exposure;
+    double fps;
+
+    double gain;
+    double temperature;
+    double target_temperature;
+    double temppower;
+    double readout_time;
+
+    int max_width;
+    int max_height;
+
+    int x0;
+    int y0;
+    int width;
+    int height;
+
+    int binning;
+    int readmode;
+    int shutter;
+    int filter;
+    double preflash_time;
+
+    int is_acquiring;
+} grabber_str;
+
+void grabber_set_exposure(grabber_str *, double );
+void grabber_set_preflash(grabber_str *, double );
+void grabber_set_shutter(grabber_str *, int );
+void grabber_set_binning(grabber_str *, int );
+void grabber_set_readmode(grabber_str *, int );
+void grabber_set_filter(grabber_str *, int );
+void grabber_set_window(grabber_str *, int , int , int , int );
+void grabber_set_temperature(grabber_str *, double );
+
+#endif /* GXCCD */
+
 #ifdef FAKE
 
 typedef struct {

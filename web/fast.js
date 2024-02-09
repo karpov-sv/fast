@@ -13,25 +13,10 @@ Fast = function(parent_id, base="/fast", title="FAST"){
 
     this.body = $("<div/>", {class:"panel-body"}).appendTo(panel);
 
-    // this.misc = $("<div/>", {class:""}).appendTo($("<div/>").appendTo(this.body));
-
-    // this.fast_image = $("<img/>", {src:this.base + "/image.jpg", class:"image img-responsive center-block", style:"width:100%;max-width:512px;"}).appendTo(this.misc);
-    // this.fast_image.on('click', $.proxy(function(){
-    //     if(this.fast_image.css("max-width") == "512px"){
-    //         this.fast_image.css("width", "initial");
-    //         this.fast_image.css("max-width", "100%");
-    //     } else {
-    //         this.fast_image.css("width", "100%");
-    //         this.fast_image.css("max-width", "512px");
-    //     }
-    // }, this));
-    // new Updater(this.fast_image, 1000);
-
     var list = $("<ul/>", {class:"list-group"}).appendTo(this.body);
 
     this.state = $("<li/>", {class:"list-group-item"}).appendTo(list);
 
-    //var tmp = $("<div/>", {class: "list-group-item"}).appendTo(list);
     this.misc = $("<div/>", {class:"list-group-item"}).appendTo($("<div/>").appendTo(list));
 
     this.fast_image = $("<img/>", {src:this.base + "/image.jpg", class:"image img-responsive center-block", style:"width:100%;max-width:512px;image-rendering:auto;"}).appendTo(this.misc);
@@ -44,9 +29,8 @@ Fast = function(parent_id, base="/fast", title="FAST"){
             this.fast_image.css("max-width", "512px");
         }
     }, this));
+
     new Updater(this.fast_image, 1000);
-
-
 
     this.status = $("<li/>", {class:"list-group-item"}).appendTo(list);
 
@@ -66,24 +50,9 @@ Fast = function(parent_id, base="/fast", title="FAST"){
         event.preventDefault();
     }, this));
 
-    // this.misc = $("<div/>", {class:""}).appendTo($("<div/>").appendTo(this.body));
-
-    // this.fast_image = $("<img/>", {src:this.base + "/image.jpg", class:"image img-responsive center-block", style:"width:100%;max-width:512px;"}).appendTo(this.misc);
-    // this.fast_image.on('click', $.proxy(function(){
-    //     if(this.fast_image.css("max-width") == "512px"){
-    //         this.fast_image.css("width", "initial");
-    //         this.fast_image.css("max-width", "100%");
-    //     } else {
-    //         this.fast_image.css("width", "100%");
-    //         this.fast_image.css("max-width", "512px");
-    //     }
-    // }, this));
-    // new Updater(this.fast_image, 1000);
-
     var footer = $("<div/>", {class:"panel-footer"});//.appendTo(panel);
 
     var form = $("<form/>").appendTo(footer);
-    // this.throbber = $("<span/>", {class:"glyphicon glyphicon-transfer"}).appendTo(form);
     this.delayValue = 2000;
     this.delay = $("<select/>", {id:getUUID()});
     $("<label>", {for: this.delay.get(0).id}).html("Refresh:").appendTo(form);
@@ -137,7 +106,7 @@ Fast.prototype.makeControls = function(type){
         tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
         this.makeButton("Scale:").appendTo(tmp);
         this.makeButton("Full", "jpeg_params 0 1").appendTo(tmp);
-        if(type == "csdu" || type == "andor2")
+        if(type == "csdu" || type == "andor2" || type == "gxccd")
             this.makeButton("99.9%", "jpeg_params 0.01 0.999").appendTo(tmp);
         this.makeButton("99%", "jpeg_params 0.01 0.99").appendTo(tmp);
         this.makeButton("95%", "jpeg_params 0.05 0.95").appendTo(tmp);
@@ -224,6 +193,26 @@ Fast.prototype.makeControls = function(type){
         this.makeButton("16 bit", "set_grabber preamp=1").appendTo(tmp);
    }
 
+    if(type == "gxccd"){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Cooling:").appendTo(tmp);
+        this.makeButton("Off", "set_grabber temperature=50").appendTo(tmp);
+        this.makeButton("0", "set_grabber temperature=0").appendTo(tmp);
+        this.makeButton("-10", "set_grabber temperature=-10").appendTo(tmp);
+        this.makeButton("-20", "set_grabber temperature=-20").appendTo(tmp);
+        this.makeButton("-30", "set_grabber temperature=-30").appendTo(tmp);
+
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Shutter:").appendTo(tmp);
+        this.makeButton("Dark", "set_grabber shutter=0").appendTo(tmp);
+        this.makeButton("Light", "set_grabber shutter=1").appendTo(tmp);
+
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Preflash:").appendTo(tmp);
+        this.makeButton("Off", "set_grabber preflash=0").appendTo(tmp);
+        this.makeButton("2s", "set_grabber preflash=2").appendTo(tmp);
+   }
+
     if(type == "pvcam"){
         tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
         this.makeButton("MGain:").appendTo(tmp);
@@ -259,7 +248,7 @@ Fast.prototype.makeControls = function(type){
         this.makeButton("1/4", "set_grabber x1=385 y1=385 x2=640 y2=640").appendTo(tmp);
     }
 
-    if(type == "pvcam" || type == "andor" || type == "andor2" || type == "qhy"){
+    if(type == "pvcam" || type == "andor" || type == "andor2" || type == "qhy" || type == "gxccd"){
         tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
         this.makeButton("Countdown:").appendTo(tmp);
         this.makeButton("None", "set_countdown 0").appendTo(tmp);
@@ -343,7 +332,7 @@ Fast.prototype.requestState = function(){
         context: this,
 
         success: function(json){
-            this.throbber.animate({opacity: 1.0}, 200).animate({opacity: 0.1}, 400);
+            this.throbber.stop().animate({opacity: 1.0}, 200).animate({opacity: 0.1}, 400);
 
             /* Crude hack to prevent jumping */
             st = document.body.scrollTop;
@@ -377,7 +366,7 @@ Fast.prototype.updateStatus = function(connected, status){
             this.connstatus.removeClass("label-danger").addClass("label-success");
         }
 
-        types = ["pvcam", "csdu", "vs2001", "vs56", "andor", "andor2", "qhy"];
+        types = ["pvcam", "csdu", "vs2001", "vs56", "andor", "andor2", "qhy", "gxccd"];
         for(var i = 0; i < types.length; i++)
             if(status[types[i]] == '1' && this.controls_type != types[i])
                 this.makeControls(types[i]);
@@ -438,10 +427,10 @@ Fast.prototype.updateStatus = function(connected, status){
         this.state.html(state);
 
         state = "Exposure: " + label(status['exposure']);
-        if(status['pvcam'] == '1' || status['csdu'] == '1' || status['andor2'] == '1' || status['qhy'] == '1'){
+        if(status['pvcam'] == '1' || status['csdu'] == '1' || status['andor2'] == '1' || status['qhy'] == '1' || status['gxccd'] == '1'){
             state += " FPS: ";
             if(status['acquisition'] == '1')
-                state += label((1.0*status['fps']).toPrecision(3));
+                state += label((1.0*status['fps']).toPrecision(3), 'primary', 'Read-out: ' + status['readout'] + ' s');
             else
                 state += label("-");
         }
@@ -508,6 +497,15 @@ Fast.prototype.updateStatus = function(connected, status){
             state += " Gain: " + label(status['gain']);
             state += " Offset: " + label(status['offset']);
             state += " Temperature: " + label(status['temperature']) + ' @ ' + label(status['temppower']/255);
+        } else if(status['gxccd'] == '1'){
+            state += " Read mode: " + label(status['readmode']);
+            state += " Gain: " + label(status['gain']);
+            state += " Shutter: " + label(status['shutter'] == '0' ? 'Dark' : 'Light', status['shutter'] == '0' ? 'primary' : 'success');
+            state += " Filter: " + label(status['filter']);
+            state += " Preflash: " + label((1.0*status['preflash']).toFixed(1), status['preflash'] == '0' ? 'primary' : 'warning');
+            // state += " Binning: " + label(status['binning']+"x"+status['binning']);
+            state += " Window: " + label(status['x0']+" "+status['y0'] + " " + status['width']+"x"+status['height']);
+            state += " Temperature: " + label((1.0*status['temperature']).toFixed(1)) + ' / ' + label((1.0*status['target_temperature']).toFixed(1)) + ' @ ' + label((100.0*status['temppower']).toFixed(0) + '%', status['temppower'] == '0' ? 'primary' : 'success');
         }
 
         if(status['vslib'] == '1' || status['csdu'] == '1' || status['andor2'] == '1'){

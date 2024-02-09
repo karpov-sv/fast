@@ -12,12 +12,13 @@ OPTIMIZE = -O2 # -msse4 # -march=native -mtune=native #-msse4 -ffast-math
 #PVCAM    = -DPVCAM
 #VSLIB	 = -DVSLIB
 #CSDU     = -DCSDU
-QHY	 = -DQHY
+GXCCD    = -DGXCCD
+# QHY	 = -DQHY
 # FAKE	 = -DFAKE
 INCLUDES = -I.
 THREADED = -D_REENTRANT -D_GNU_SOURCE -D_XOPEN_SOURCE -D_POSIX_C_SOURCE=200809L
 FLAGS    = -Wall -fms-extensions -fno-strict-aliasing
-CFLAGS   = $(FLAGS) $(THREADED) $(GDEBUG) $(DEBUG) $(OPTIMIZE) $(INCLUDES) $(ANDOR) $(ANDOR2) $(PVCAM) $(VSLIB) $(CSDU) $(QHY) $(FAKE)
+CFLAGS   = $(FLAGS) $(THREADED) $(GDEBUG) $(DEBUG) $(OPTIMIZE) $(INCLUDES) $(ANDOR) $(ANDOR2) $(PVCAM) $(VSLIB) $(CSDU) $(QHY) $(GXCCD) $(FAKE)
 CXXFLAGS = $(CFLAGS)
 LDLIBS  = -L. -lm -lcfitsio -lpthread -ljpeg
 
@@ -109,6 +110,15 @@ ifdef QHY
 LDLIBS += -lqhyccd
 TARGETS += test_qhy fast
 COMMON_OBJS += grabber_qhy.o
+endif
+
+# Moravian Instruments GXCCD
+ifdef GXCCD
+#LDLIBS += -L../libgxccd/lib -lgxccd
+LDLIBS +=  ../libgxccd/lib/libgxccd.a -lusb-1.0
+INCLUDES += -I../libgxccd/include
+TARGETS += fast
+COMMON_OBJS += grabber_gxccd.o
 endif
 
 # Fake grabber
