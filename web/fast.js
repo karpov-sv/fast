@@ -208,6 +208,15 @@ Fast.prototype.makeControls = function(type){
         this.makeButton("Light", "set_grabber shutter=1").appendTo(tmp);
 
         tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Filter:").appendTo(tmp);
+        this.makeButton("0", "set_grabber filter=0").appendTo(tmp);
+        this.makeButton("1", "set_grabber filter=1").appendTo(tmp);
+        this.makeButton("2", "set_grabber filter=2").appendTo(tmp);
+        this.makeButton("3", "set_grabber filter=3").appendTo(tmp);
+        this.makeButton("4", "set_grabber filter=4").appendTo(tmp);
+        this.makeButton("5", "set_grabber filter=5").appendTo(tmp);
+
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
         this.makeButton("Preflash:").appendTo(tmp);
         this.makeButton("Off", "set_grabber preflash=0").appendTo(tmp);
         this.makeButton("2s", "set_grabber preflash=2").appendTo(tmp);
@@ -505,7 +514,7 @@ Fast.prototype.updateStatus = function(connected, status){
             state += " Preflash: " + label((1.0*status['preflash']).toFixed(1), status['preflash'] == '0' ? 'primary' : 'warning');
             // state += " Binning: " + label(status['binning']+"x"+status['binning']);
             state += " Window: " + label(status['x0']+" "+status['y0'] + " " + status['width']+"x"+status['height']);
-            state += " Temperature: " + label((1.0*status['temperature']).toFixed(1)) + ' / ' + label((1.0*status['target_temperature']).toFixed(1)) + ' @ ' + label((100.0*status['temppower']).toFixed(0) + '%', status['temppower'] == '0' ? 'primary' : 'success');
+            state += " Temperature: " + label((1.0*status['temperature']).toFixed(1)) + ' / ' + label((1.0*status['target_temperature']).toFixed(1), 'primary', 'Target temperature') + ' @ ' + label((100.0*status['temppower']).toFixed(0) + '%', status['temppower'] == '0' ? 'primary' : 'success', 'Power utilization') + ' ' + label((1.0*status['camera_temperature']).toFixed(1), 'primary', 'Camera env temperature');
         }
 
         if(status['vslib'] == '1' || status['csdu'] == '1' || status['andor2'] == '1'){

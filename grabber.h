@@ -236,6 +236,7 @@ typedef struct {
     double gain;
     double temperature;
     double target_temperature;
+    double camera_temperature;
     double temppower;
     double readout_time;
 

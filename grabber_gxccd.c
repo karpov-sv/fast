@@ -95,6 +95,8 @@ grabber_str *grabber_create()
 
     dprintf("Exposures: %g - %g\n", 1e-6*get_int(grabber->camera, GIP_MINIMAL_EXPOSURE), 1e-3*get_int(grabber->camera, GIP_MAXIMAL_EXPOSURE));
 
+    dprintf("Sub-frame readout support: %d\n", get_bool(grabber->camera, GBP_SUB_FRAME));
+
     dprintf("Fan support: %d\n", get_bool(grabber->camera, GBP_FAN));
     dprintf("Max fan setting: %d\n", get_int(grabber->camera, GIP_MAX_FAN));
 
@@ -422,6 +424,7 @@ image_str *grabber_wait_image(grabber_str *grabber, double delay)
 
         grabber->gain = get_float(grabber->camera, GV_ADC_GAIN);
         grabber->temperature = get_float(grabber->camera, GV_CHIP_TEMPERATURE);
+        grabber->camera_temperature = get_float(grabber->camera, GV_CAMERA_TEMPERATURE);
         grabber->temppower = get_float(grabber->camera, GV_POWER_UTILIZATION);
     }
 
