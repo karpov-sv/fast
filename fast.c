@@ -448,11 +448,12 @@ char *get_status_string(fast_str *fast)
                   fast->grabber->gain, fast->grabber->offset, fast->grabber->binning,
                   fast->grabber->temperature, fast->grabber->temppower);
 #elif GXCCD
-    add_to_string(&status, " gxccd=1 exposure=%g fps=%g gain=%g"
+    add_to_string(&status, " gxccd=1 connected=%d exposure=%g fps=%g gain=%g"
                   " temperature=%g target_temperature=%g camera_temperature=%g temppower=%g"
                   " max_width=%d max_height=%d x0=%d y0=%d width=%d height=%d"
                   " binning=%d readmode=%d shutter=%d filter=%d"
                   " preflash=%g readout=%g",
+                  fast->grabber->camera ? 1 : 0,
                   fast->grabber->exposure, fast->grabber->fps, fast->grabber->gain,
                   fast->grabber->temperature, fast->grabber->target_temperature,
                   fast->grabber->camera_temperature, fast->grabber->temppower,

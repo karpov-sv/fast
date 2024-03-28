@@ -10,6 +10,7 @@ Fast = function(parent_id, base="/fast", title="FAST"){
     var title = $("<h3/>", {class:"panel-title"}).html(title + " ").appendTo(header);
     this.throbber = $("<span/>", {class:"glyphicon glyphicon-refresh pull-right"}).appendTo(title);
     this.connstatus = $("<span/>", {class:"label label-default"}).appendTo(title);
+    this.hw_connstatus = $("<span/>", {class:"label label-default"}).appendTo(title);
 
     this.body = $("<div/>", {class:"panel-body"}).appendTo(panel);
 
@@ -151,6 +152,15 @@ Fast.prototype.makeControls = function(type){
         this.makeButton("1", "set_grabber exposure=1").appendTo(tmp);
         this.makeButton("5", "set_grabber exposure=5").appendTo(tmp);
         this.makeButton("10", "set_grabber exposure=10").appendTo(tmp);
+    } else if(type == "gxccd"){
+        this.makeButton("0.01", "set_grabber exposure=0.01").appendTo(tmp);
+        this.makeButton("0.1", "set_grabber exposure=0.1").appendTo(tmp);
+        this.makeButton("0.2", "set_grabber exposure=0.2").appendTo(tmp);
+        this.makeButton("0.5", "set_grabber exposure=0.5").appendTo(tmp);
+        this.makeButton("1", "set_grabber exposure=1").appendTo(tmp);
+        this.makeButton("5", "set_grabber exposure=5").appendTo(tmp);
+        this.makeButton("10", "set_grabber exposure=10").appendTo(tmp);
+        this.makeButton("30", "set_grabber exposure=30").appendTo(tmp);
     } else {
         this.makeButton("0.01", "set_grabber exposure=0.01").appendTo(tmp);
         this.makeButton("0.1", "set_grabber exposure=0.1").appendTo(tmp);
@@ -373,6 +383,16 @@ Fast.prototype.updateStatus = function(connected, status){
         } else {
             this.connstatus.html("Connected");
             this.connstatus.removeClass("label-danger").addClass("label-success");
+
+            if(status['gxccd'] == '1'){
+                if(status['connected'] == '1') {
+                    this.hw_connstatus.html("Camera connected");
+                    this.hw_connstatus.removeClass("label-danger").addClass("label-success");
+                } else {
+                    this.hw_connstatus.html("Camera disconnected");
+                    this.hw_connstatus.removeClass("label-success").addClass("label-danger");
+                }
+            }
         }
 
         types = ["pvcam", "csdu", "vs2001", "vs56", "andor", "andor2", "qhy", "gxccd"];
@@ -534,6 +554,8 @@ Fast.prototype.updateStatus = function(connected, status){
 
         this.connstatus.html("Disconnected");
         this.connstatus.removeClass("label-success").addClass("label-danger");
+        this.hw_connstatus.html("");
+        this.hw_connstatus.removeClass("label-success").removeClass("label-danger");
     }
 }
 

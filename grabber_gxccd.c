@@ -14,6 +14,7 @@
 static int camera_id = -1;
 static int nframes = 0;
 static time_str time0;
+static time_str time_reconnect;
 static char gx_err[200];
 
 void enumerate_cameras_callback(int eid)
@@ -69,19 +70,17 @@ char *get_string(camera_t *camera, int kind)
     return value;
 }
 
-grabber_str *grabber_create()
+int grabber_init_camera(grabber_str *grabber)
 {
-    grabber_str *grabber = NULL;
-
-    grabber = (grabber_str *)malloc(sizeof(grabber_str));
-
     gxccd_enumerate_usb(enumerate_cameras_callback);
     dprintf("Camera id: %d\n", camera_id);
 
     grabber->camera = gxccd_initialize_usb(camera_id);
 
-    if(!grabber->camera)
-        exit_with_error("Cannot initialize camera\n");
+    if(!grabber->camera) {
+        dprintf("Cannot initialize camera\n");
+        return FALSE;
+    }
 
     dprintf("Camera description: %s\n", get_string(grabber->camera, GSP_CAMERA_DESCRIPTION));
     dprintf("Camera manufacturer: %s\n", get_string(grabber->camera, GSP_MANUFACTURER));
@@ -131,9 +130,8 @@ grabber_str *grabber_create()
 
     grabber->gain = get_float(grabber->camera, GV_ADC_GAIN);
     grabber->temperature = get_float(grabber->camera, GV_CHIP_TEMPERATURE);
+    grabber->camera_temperature = get_float(grabber->camera, GV_CAMERA_TEMPERATURE);
     grabber->temppower = get_float(grabber->camera, GV_POWER_UTILIZATION);
-
-    grabber->exposure = 1.0;
 
     grabber_set_binning(grabber, 1);
     grabber_set_readmode(grabber, 0);
@@ -149,10 +147,32 @@ grabber_str *grabber_create()
 
     grabber_set_filter(grabber, 0);
 
+    return TRUE;
+}
+
+grabber_str *grabber_create()
+{
+    grabber_str *grabber = NULL;
+
+    grabber = (grabber_str *)malloc(sizeof(grabber_str));
+
     grabber->is_acquiring = FALSE;
+    grabber->exposure = 1.0;
+    grabber->gain = 0;
+    grabber->temperature = 0;
+    grabber->camera_temperature = 0;
+    grabber->temppower = 0;
+
+    grabber->max_width = 0;
+    grabber->max_height = 0;
+
+    if(!grabber_init_camera(grabber)) {
+        dprintf("No camera found\n");
+    }
 
     nframes = 0;
     time0 = time_current();
+    time_reconnect = time_current();
 
     return grabber;
 }
@@ -162,14 +182,15 @@ void grabber_delete(grabber_str *grabber)
     if(!grabber)
         return;
 
-    gxccd_release(grabber->camera);
+    if(grabber->camera)
+        gxccd_release(grabber->camera);
 
     free(grabber);
 }
 
 void grabber_info(grabber_str *grabber)
 {
-    if(!grabber)
+    if(!grabber || !grabber->camera)
         return;
 
     dprintf("%s info\n", timestamp());
@@ -188,7 +209,7 @@ void grabber_info(grabber_str *grabber)
 
 void grabber_acquisition_start(grabber_str *grabber)
 {
-    if(!grabber)
+    if(!grabber || !grabber->camera)
         return;
 
     dprintf("%s acquisition_start: exp %g shutter %d\n", timestamp(), grabber->exposure, grabber->shutter);
@@ -205,7 +226,7 @@ void grabber_acquisition_start(grabber_str *grabber)
 
 void grabber_acquisition_stop(grabber_str *grabber)
 {
-    if(!grabber)
+    if(!grabber || !grabber->camera)
         return;
 
     if(grabber->is_acquiring) {
@@ -244,7 +265,7 @@ void grabber_set_shutter(grabber_str *grabber, int value)
 
 void grabber_set_binning(grabber_str *grabber, int value)
 {
-    if(!grabber)
+    if(!grabber || !grabber->camera)
         return;
 
     dprintf("%s set_binning %d\n", timestamp(), value);
@@ -259,7 +280,7 @@ void grabber_set_binning(grabber_str *grabber, int value)
 
 void grabber_set_readmode(grabber_str *grabber, int value)
 {
-    if(!grabber)
+    if(!grabber || !grabber->camera)
         return;
 
     dprintf("%s set_readmode %d\n", timestamp(), value);
@@ -274,7 +295,7 @@ void grabber_set_readmode(grabber_str *grabber, int value)
 
 void grabber_set_filter(grabber_str *grabber, int value)
 {
-    if(!grabber)
+    if(!grabber || !grabber->camera)
         return;
 
     dprintf("%s set_filter %d\n", timestamp(), value);
@@ -288,7 +309,7 @@ void grabber_set_filter(grabber_str *grabber, int value)
 
 void grabber_set_window(grabber_str *grabber, int x0, int y0, int width, int height)
 {
-    if(!grabber)
+    if(!grabber || !grabber->camera)
         return;
 
     if(width <= 0 || width > grabber->max_width ||
@@ -312,7 +333,7 @@ void grabber_set_preflash(grabber_str *grabber, double preflash_time)
 {
     int nclears = 2;
 
-    if(!grabber)
+    if(!grabber || !grabber->camera)
         return;
 
     grabber->preflash_time = preflash_time;
@@ -333,7 +354,7 @@ void grabber_set_preflash(grabber_str *grabber, double preflash_time)
 
 void grabber_set_temperature(grabber_str *grabber, double value)
 {
-    if(!grabber)
+    if(!grabber || !grabber->camera)
         return;
 
     dprintf("%s set_temperature %g\n", timestamp(), value);
@@ -351,6 +372,23 @@ void grabber_set_temperature(grabber_str *grabber, double value)
 image_str *grabber_wait_image(grabber_str *grabber, double delay)
 {
     image_str *image = NULL;
+
+    if(grabber->camera && !get_bool(grabber->camera, GBP_CONNECTED)){
+        dprintf("Camera is disconnected");
+        gxccd_release(grabber->camera);
+        grabber->camera = NULL;
+    }
+
+    if(!grabber->camera) {
+        if(1e-3*time_interval(time_reconnect, time_current()) < 10)
+            return NULL;
+
+        time_reconnect = time_current();
+
+        dprintf("Trying to connect to camera\n");
+        if(!grabber_init_camera(grabber))
+            return NULL;
+    }
 
     if(grabber->is_acquiring) {
         bool ready = FALSE;
