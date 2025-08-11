@@ -7,10 +7,24 @@ Fast = function(parent_id, base="/fast", title="FAST"){
     var panel = $("<div/>", {class:"fast panel panel-default"});
 
     var header = $("<div/>", {class:"panel-heading"}).appendTo(panel);
-    var title = $("<h3/>", {class:"panel-title"}).html(title + " ").appendTo(header);
+    var title = $("<h3/>", {class:"panel-title"}).appendTo(header);
+    $("<span/>").html(" " + this.title + " ").appendTo(title);
+    this.expander = $("<span/>", {class:"pull-right glyphicon glyphicon-plus", style:"padding-left: 0.5em; opacity: 0.5"}).appendTo(title);
     this.throbber = $("<span/>", {class:"glyphicon glyphicon-refresh pull-right"}).appendTo(title);
     this.connstatus = $("<span/>", {class:"label label-default"}).appendTo(title);
     this.hw_connstatus = $("<span/>", {class:"label label-default"}).appendTo(title);
+
+    this.expander.on('click', $.proxy(function(){
+        var main = $('#container');
+
+        if(main.hasClass('container')) {
+            main.removeClass('container').addClass('container-fluid');
+            this.expander.removeClass('glyphicon-plus').addClass('glyphicon-minus');
+        } else {
+            main.removeClass('container-fluid').addClass('container');
+            this.expander.removeClass('glyphicon-minus').addClass('glyphicon-plus');
+        }
+    }, this));
 
     this.body = $("<div/>", {class:"panel-body"}).appendTo(panel);
 
@@ -107,15 +121,19 @@ Fast.prototype.makeControls = function(type){
         tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
         this.makeButton("Scale:").appendTo(tmp);
         this.makeButton("Full", "jpeg_params 0 1").appendTo(tmp);
-        if(type == "csdu" || type == "andor2" || type == "gxccd")
+        if(type == "csdu" || type == "andor2" || type == "gxccd") {
             this.makeButton("99.9%", "jpeg_params 0.01 0.999").appendTo(tmp);
+            this.makeButton("99.5%", "jpeg_params 0.05 0.995").appendTo(tmp);
+        }
         this.makeButton("99%", "jpeg_params 0.01 0.99").appendTo(tmp);
         this.makeButton("95%", "jpeg_params 0.05 0.95").appendTo(tmp);
         this.makeButton("90%", "jpeg_params 0.1 0.9").appendTo(tmp);
         this.makeButton(":").appendTo(tmp);
-        this.makeButton("x1", "jpeg_params scale=1").appendTo(tmp);
-        this.makeButton("x2", "jpeg_params scale=2").appendTo(tmp);
-        this.makeButton("x4", "jpeg_params scale=4").appendTo(tmp);
+        this.makeButton("/ 1", "jpeg_params scale=1").appendTo(tmp);
+        this.makeButton("/ 2", "jpeg_params scale=2").appendTo(tmp);
+        this.makeButton("/ 4", "jpeg_params scale=4").appendTo(tmp);
+        this.makeButton("/ 8", "jpeg_params scale=8").appendTo(tmp);
+        this.makeButton("/ 16", "jpeg_params scale=16").appendTo(tmp);
 
         tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
         this.makeButton("Quality:").appendTo(tmp);
@@ -127,6 +145,15 @@ Fast.prototype.makeControls = function(type){
         this.makeButton("Total Img", function() {popupImage(this.base+'/total_image.jpg', 'Total image', 1)}).appendTo(tmp);
         this.makeButton("Total Flux", function() {popupImage(this.base+'/total_flux.jpg', 'Light Curve - Total', 1)}).appendTo(tmp);
         this.makeButton("Current Flux", function() {popupImage(this.base+'/current_flux.jpg', 'Light Curve - Current', 1)}).appendTo(tmp);
+    }
+
+    if(type == 'gxccd'){
+        tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
+        this.makeButton("Zoom:").appendTo(tmp);
+        this.makeButton("x1", "set_zoom 0").appendTo(tmp);
+        this.makeButton("x2", "set_zoom 2").appendTo(tmp);
+        this.makeButton("x4", "set_zoom 4").appendTo(tmp);
+        this.makeButton("x8", "set_zoom 8").appendTo(tmp);
     }
 
     tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
@@ -271,9 +298,10 @@ Fast.prototype.makeControls = function(type){
         tmp = $("<li/>", {class:"btn-group"}).appendTo(this.controls);
         this.makeButton("Countdown:").appendTo(tmp);
         this.makeButton("None", "set_countdown 0").appendTo(tmp);
+        this.makeButton("10", "set_countdown 10").appendTo(tmp);
         this.makeButton("100", "set_countdown 100").appendTo(tmp);
         this.makeButton("1000", "set_countdown 1000").appendTo(tmp);
-        this.makeButton("10000", "set_countdown 10000").appendTo(tmp);
+        // this.makeButton("10000", "set_countdown 10000").appendTo(tmp);
     }
 
     if(type == "pvcam"){
@@ -533,7 +561,10 @@ Fast.prototype.updateStatus = function(connected, status){
             state += " Filter: " + label(status['filter']);
             state += " Preflash: " + label((1.0*status['preflash']).toFixed(1), status['preflash'] == '0' ? 'primary' : 'warning');
             // state += " Binning: " + label(status['binning']+"x"+status['binning']);
-            state += " Window: " + label(status['x0']+" "+status['y0'] + " " + status['width']+"x"+status['height']);
+            state += " Window: " + label(status['x0']+" "+status['y0'] + " " + status['width']+" "+status['height']);
+            if(status['zoom'] > 0){
+                state += " " + label("x"+status['zoom']);
+            }
             state += " Temperature: " + label((1.0*status['temperature']).toFixed(1)) + ' / ' + label((1.0*status['target_temperature']).toFixed(1), 'primary', 'Target temperature') + ' @ ' + label((100.0*status['temppower']).toFixed(0) + '%', status['temppower'] == '0' ? 'primary' : 'success', 'Power utilization') + ' ' + label((1.0*status['camera_temperature']).toFixed(1), 'primary', 'Camera env temperature');
         }
 
