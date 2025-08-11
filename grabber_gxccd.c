@@ -380,8 +380,10 @@ image_str *grabber_wait_image(grabber_str *grabber, double delay)
     }
 
     if(!grabber->camera) {
-        if(1e-3*time_interval(time_reconnect, time_current()) < 10)
+        if(1e-3*time_interval(time_reconnect, time_current()) < 10){
+            usleep(100000);
             return NULL;
+        }
 
         time_reconnect = time_current();
 
