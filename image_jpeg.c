@@ -117,6 +117,10 @@ void image_jpeg_worker(image_str *image, char *filename, unsigned char **buffer_
         shift = 2;
     else if(scale <= 8)
         shift = 3;
+    else if(scale <= 16)
+        shift = 4;
+    else
+        shift = 5;
 
     new_width = image->width >> shift;
     new_height = image->height >> shift;
@@ -145,9 +149,11 @@ void image_jpeg_worker(image_str *image, char *filename, unsigned char **buffer_
                 int new_x = x >> shift;
                 int new_y = y >> shift;
 
-                value = MIN_INT_OPT(MAX_INT_OPT(0, value), 255) >> shift*2;
+                /* value = MIN_INT_OPT(MAX_INT_OPT(0, value), 255) >> shift*2; */
+                /* data[new_x + new_y*new_width] += value; */
 
-                data[new_x + new_y*new_width] += value;
+                value = MIN_INT_OPT(MAX_INT_OPT(0, value), 255);
+                data[new_x + new_y*new_width] = value;
             }
     } else {
         int min = image->data[0];
@@ -169,9 +175,11 @@ void image_jpeg_worker(image_str *image, char *filename, unsigned char **buffer_
                 int new_x = x >> shift;
                 int new_y = y >> shift;
 
-                value = MIN_INT_OPT(MAX_INT_OPT(0, value), 255) >> shift*2;
+                /* value = MIN_INT_OPT(MAX_INT_OPT(0, value), 255) >> shift*2; */
+                /* data[new_x + new_y*new_width] += value; */
 
-                data[new_x + new_y*new_width] += value;
+                value = MIN_INT_OPT(MAX_INT_OPT(0, value), 255);
+                data[new_x + new_y*new_width] = value;
             }
     }
 

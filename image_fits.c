@@ -228,6 +228,14 @@ void image_dump_to_fits(image_str *image, char *filename)
     fits_create_file(&fits, filename_exclam, &status);
     free(filename_exclam);
 
+    if(!fits){
+        /* Print out error messages if any */
+        fits_report_error(stderr, status);
+        dprintf("Cannot create FITS file %s\n", filename_exclam);
+        cfitsio_unlock();
+        return;
+    }
+
     /* Creating 3-dimensional FITS file of necessary type. */
     if(image->type == IMAGE_DOUBLE){
         fits_create_img(fits, DOUBLE_IMG, naxis, naxes, &status);

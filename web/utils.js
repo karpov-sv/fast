@@ -72,6 +72,7 @@ Updater = function(image_id, timeout){
     this.img.on('load', $.proxy(this.run, this));
     this.img.on('error', $.proxy(this.run, this));
 
+    this.update();
     this.run();
 }
 

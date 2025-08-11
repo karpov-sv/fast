@@ -6,7 +6,7 @@
 
 #include "fast.h"
 
-/* #define FITS_COMPRESS 1 */
+#define FITS_COMPRESS 1
 #define MAX_FILES_PER_DIR 10000
 
 typedef struct {

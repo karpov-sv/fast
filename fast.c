@@ -550,19 +550,26 @@ void process_command(server_str *server, connection_str *connection, char *strin
             if(!fast->current_frame_data){
                 image_str *image = image_convert_to_double(fast->image);
 
-                image_dump_to_fits(image, "image.fits");
-
                 postprocess_image(fast, image, 1);
 
                 /* image_jpeg_set_scale(1); */
                 if(fast->zoom){
-                    image_str *crop = image_crop(image, 0.35*image->width, 0.35*image->height, 0.65*image->width, 0.65*image->height);
+                    image_str *crop;
 
-                    image_convert_to_jpeg(crop, (unsigned char **)&fast->current_frame_data, &fast->current_frame_length);
+                    if(fast->zoom > 10)
+                        crop = image_crop(image,
+                                          0.5*(image->width - fast->zoom), 0.5*(image->height - fast->zoom),
+                                          0.5*(image->width + fast->zoom), 0.5*(image->height + fast->zoom));
+                    else
+                        crop = image_crop(image,
+                                          0.35*image->width, 0.35*image->height,
+                                          0.65*image->width, 0.65*image->height);
 
-                    image_delete(crop);
-                } else
-                    image_convert_to_jpeg(image, (unsigned char **)&fast->current_frame_data, &fast->current_frame_length);
+                    image_delete(image);
+                    image = crop;
+                }
+
+                image_convert_to_jpeg(image, (unsigned char **)&fast->current_frame_data, &fast->current_frame_length);
 
                 image_delete(image);
             }
@@ -585,6 +592,22 @@ void process_command(server_str *server, connection_str *connection, char *strin
                 postprocess_image(fast, image, fast->total_length);
 
                 /* image_jpeg_set_scale(1); */
+                if(fast->zoom){
+                    image_str *crop;
+
+                    if(fast->zoom > 10)
+                        crop = image_crop(image,
+                                          0.5*(image->width - fast->zoom), 0.5*(image->height - fast->zoom),
+                                          0.5*(image->width + fast->zoom), 0.5*(image->height + fast->zoom));
+                    else
+                        crop = image_crop(image,
+                                          0.35*image->width, 0.35*image->height,
+                                          0.65*image->width, 0.65*image->height);
+
+                    image_delete(image);
+                    image = crop;
+                }
+
                 image_convert_to_jpeg(image, (unsigned char **)&fast->total_frame_data, &fast->total_frame_length);
 
                 image_delete(image);
@@ -605,6 +628,22 @@ void process_command(server_str *server, connection_str *connection, char *strin
                 postprocess_image(fast, image, fast->running_length);
 
                 /* image_jpeg_set_scale(1); */
+                if(fast->zoom){
+                    image_str *crop;
+
+                    if(fast->zoom > 10)
+                        crop = image_crop(image,
+                                          0.5*(image->width - fast->zoom), 0.5*(image->height - fast->zoom),
+                                          0.5*(image->width + fast->zoom), 0.5*(image->height + fast->zoom));
+                    else
+                        crop = image_crop(image,
+                                          0.35*image->width, 0.35*image->height,
+                                          0.65*image->width, 0.65*image->height);
+
+                    image_delete(image);
+                    image = crop;
+                }
+
                 image_convert_to_jpeg(image, (unsigned char **)&fast->running_frame_data, &fast->running_frame_length);
 
                 image_delete(image);
@@ -905,7 +944,7 @@ int main(int argc, char **argv)
     pthread_create(&storage_thread, NULL, storage_worker, (void *)fast);
 
     image_jpeg_set_percentile(0.05, 0.995);
-    image_jpeg_set_scale(8);
+    image_jpeg_set_scale(16);
     image_jpeg_set_colormap(1);
     image_jpeg_set_quality(95);
 
